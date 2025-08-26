@@ -11,7 +11,7 @@ import { FileUploader } from "@/components/file-uploader"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { SparkStatus } from "@/types/spark"
-import { X, Link, Link2, Plus } from "lucide-react"
+import { X, Link, Link2, Plus, Target } from "lucide-react"
 import {
   MDXEditor,
   type MDXEditorMethods,
