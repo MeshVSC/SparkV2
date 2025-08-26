@@ -2,9 +2,42 @@ import { db } from "@/lib/db"
 import { SparkStatus, AchievementType } from "@/types/spark"
 
 interface AchievementCheck {
-  type: "SPARK_CREATED" | "SPARK_UPDATED" | "TODO_COMPLETED" | "ATTACHMENT_ADDED"
+  type: "SPARK_CREATED" | "SPARK_UPDATED" | "TODO_COMPLETED" | "ATTACHMENT_ADDED" | "CONNECTION_CREATED"
   userId: string
   data?: any
+}
+
+// Event system for achievement unlocks
+type AchievementUnlockedListener = (achievement: {
+  id: string
+  name: string
+  description: string
+  icon: string
+  xpReward: number
+  type: AchievementType
+}) => void
+
+const achievementListeners: AchievementUnlockedListener[] = []
+
+export function onAchievementUnlocked(listener: AchievementUnlockedListener) {
+  achievementListeners.push(listener)
+}
+
+export function offAchievementUnlocked(listener: AchievementUnlockedListener) {
+  const index = achievementListeners.indexOf(listener)
+  if (index > -1) {
+    achievementListeners.splice(index, 1)
+  }
+}
+
+function notifyAchievementUnlocked(achievement: any) {
+  achievementListeners.forEach(listener => {
+    try {
+      listener(achievement)
+    } catch (error) {
+      console.error("Error in achievement listener:", error)
+    }
+  })
 }
 
 export class AchievementEngine {
@@ -36,6 +69,9 @@ export class AchievementEngine {
           break
         case "ATTACHMENT_ADDED":
           await this.checkAttachmentAchievements(user, achievements, unlockedAchievementIds)
+          break
+        case "CONNECTION_CREATED":
+          await this.checkConnectionAchievements(user, achievements, unlockedAchievementIds)
           break
       }
     } catch (error) {
@@ -121,6 +157,27 @@ export class AchievementEngine {
     }
   }
 
+  private static async checkConnectionAchievements(user: any, achievements: any[], unlockedAchievementIds: string[]) {
+    const connectionCount = await db.sparkConnection.count({
+      where: {
+        OR: [
+          { sparkId1: { in: user.sparks?.map((s: any) => s.id) || [] } },
+          { sparkId2: { in: user.sparks?.map((s: any) => s.id) || [] } },
+        ]
+      }
+    })
+
+    // Connector achievement (10 connections)
+    if (connectionCount >= 10 && !unlockedAchievementIds.includes("connector")) {
+      await this.unlockAchievement(user.id, "connector")
+    }
+
+    // Network Builder achievement (50 connections)
+    if (connectionCount >= 50 && !unlockedAchievementIds.includes("network-builder")) {
+      await this.unlockAchievement(user.id, "network-builder")
+    }
+  }
+
   private static async unlockAchievement(userId: string, achievementId: string) {
     try {
       const achievement = await db.achievement.findUnique({
@@ -164,6 +221,9 @@ export class AchievementEngine {
       })
 
       console.log(`Achievement unlocked: ${achievement.name} (+${achievement.xpReward} XP)`)
+
+      // Notify listeners
+      notifyAchievementUnlocked(achievement)
     } catch (error) {
       console.error("Error unlocking achievement:", error)
     }
@@ -177,6 +237,7 @@ export class AchievementEngine {
         totalAttachments,
         saplingCount,
         forestCount,
+        totalConnections,
         userAchievements
       ] = await Promise.all([
         db.spark.count({ where: { userId } }),
@@ -203,6 +264,14 @@ export class AchievementEngine {
             status: SparkStatus.FOREST 
           } 
         }),
+        db.sparkConnection.count({
+          where: {
+            OR: [
+              { sparkId1: { in: (await db.spark.findMany({ where: { userId } })).map(s => s.id) } },
+              { sparkId2: { in: (await db.spark.findMany({ where: { userId } })).map(s => s.id) } },
+            ]
+          }
+        }),
         db.userAchievement.findMany({
           where: { userId },
           include: { achievement: true },
@@ -215,6 +284,7 @@ export class AchievementEngine {
         totalAttachments,
         saplingCount,
         forestCount,
+        totalConnections,
         unlockedAchievements: userAchievements.length,
         totalAchievements: 15, // Total number of predefined achievements
         recentAchievements: userAchievements

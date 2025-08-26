@@ -21,7 +21,6 @@ import {
 } from "lucide-react"
 import { CreateSparkDialog } from "@/components/create-spark-dialog"
 import { AchievementCenter } from "@/components/achievement-center"
-import { useState } from "react"
 
 export function Sidebar() {
   const { state, actions } = useSpark()

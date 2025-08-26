@@ -214,6 +214,22 @@ class SparkDatabase {
     return await response.json()
   }
 
+  async connectSparks(sparkId1: string, sparkId2: string) {
+    const response = await fetch("http://localhost:3000/api/mcp/connections", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ sparkId1, sparkId2 }),
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Failed to connect sparks: ${response.statusText}`)
+    }
+    
+    return await response.json()
+  }
+
   async getSuggestions(sparkId: string) {
     // Use AI to generate suggestions for spark evolution
     try {
@@ -503,11 +519,21 @@ server.setRequestHandler("tools/list", async () => {
         },
       },
       {
-        name: "get_user_progress",
-        description: "Get user progress and statistics",
+        name: "connect_sparks",
+        description: "Connect two sparks together to show their relationship",
         inputSchema: {
           type: "object",
-          properties: {},
+          properties: {
+            sparkId1: {
+              type: "string",
+              description: "ID of the first spark to connect",
+            },
+            sparkId2: {
+              type: "string",
+              description: "ID of the second spark to connect",
+            },
+          },
+          required: ["sparkId1", "sparkId2"],
         },
       },
     ],
@@ -661,6 +687,17 @@ server.setRequestHandler("tools/call", async (request) => {
             {
               type: "text",
               text: JSON.stringify(progress, null, 2),
+            },
+          ],
+        }
+
+      case "connect_sparks":
+        await db.connectSparks(args.sparkId1, args.sparkId2)
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({ success: true, message: "Sparks connected successfully" }, null, 2),
             },
           ],
         }

@@ -6,6 +6,16 @@ import { SparkCard } from "@/components/spark-card"
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
 import { Spark } from "@/types/spark"
 
+interface ConnectionLine {
+  id: string
+  fromSparkId: string
+  toSparkId: string
+  fromX: number
+  fromY: number
+  toX: number
+  toY: number
+}
+
 export function SparkCanvas() {
   const { state, actions } = useSpark()
   const [activeSpark, setActiveSpark] = useState<Spark | null>(null)
@@ -17,6 +27,38 @@ export function SparkCanvas() {
       },
     })
   )
+
+  // Calculate connection lines between sparks
+  const getConnectionLines = useCallback((): ConnectionLine[] => {
+    const lines: ConnectionLine[] = []
+    
+    state.sparks.forEach(spark => {
+      if (spark.connections && spark.connections.length > 0) {
+        spark.connections.forEach(connection => {
+          const connectedSpark = state.sparks.find(s => s.id === connection.sparkId2)
+          if (connectedSpark) {
+            // Only create line once per connection (avoid duplicates)
+            if (!lines.some(line => 
+              (line.fromSparkId === spark.id && line.toSparkId === connectedSpark.id) ||
+              (line.fromSparkId === connectedSpark.id && line.toSparkId === spark.id)
+            )) {
+              lines.push({
+                id: `${spark.id}-${connectedSpark.id}`,
+                fromSparkId: spark.id,
+                toSparkId: connectedSpark.id,
+                fromX: (spark.positionX || Math.random() * 600) + 128, // Center of card (card width is 256/2)
+                fromY: (spark.positionY || Math.random() * 400) + 100, // Center of card (approximate height)
+                toX: (connectedSpark.positionX || Math.random() * 600) + 128,
+                toY: (connectedSpark.positionY || Math.random() * 400) + 100,
+              })
+            }
+          }
+        })
+      }
+    })
+    
+    return lines
+  }, [state.sparks])
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const { active } = event
@@ -57,6 +99,8 @@ export function SparkCanvas() {
     )
   })
 
+  const connectionLines = getConnectionLines()
+
   return (
     <DndContext
       sensors={sensors}
@@ -79,6 +123,45 @@ export function SparkCanvas() {
             <rect width="100%" height="100%" fill="url(#grid)" />
           </svg>
         </div>
+
+        {/* Connection Lines */}
+        <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+          {connectionLines.map((line) => (
+            <line
+              key={line.id}
+              x1={line.fromX}
+              y1={line.fromY}
+              x2={line.toX}
+              y2={line.toY}
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeOpacity="0.3"
+              className="text-primary"
+              strokeDasharray="5,5"
+            />
+          ))}
+          {/* Add circles at connection points for better visibility */}
+          {connectionLines.map((line) => (
+            <g key={`${line.id}-points`}>
+              <circle
+                cx={line.fromX}
+                cy={line.fromY}
+                r="4"
+                fill="currentColor"
+                className="text-primary"
+                fillOpacity="0.6"
+              />
+              <circle
+                cx={line.toX}
+                cy={line.toY}
+                r="4"
+                fill="currentColor"
+                className="text-primary"
+                fillOpacity="0.6"
+              />
+            </g>
+          ))}
+        </svg>
 
         {/* Sparks */}
         {filteredSparks.map((spark) => (

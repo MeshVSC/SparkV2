@@ -323,6 +323,14 @@ export class SparkMCPServer {
           data: { xp: spark2.xp + 25 }
         })
       ])
+
+      // Trigger connection achievement check
+      const { AchievementEngine } = await import("@/lib/achievement-engine")
+      await AchievementEngine.checkAndAwardAchievements({
+        type: "CONNECTION_CREATED",
+        userId: spark1.userId,
+        data: { sparkId1, sparkId2 }
+      })
     } catch (error) {
       console.error("Error connecting sparks:", error)
       throw new Error("Failed to connect sparks")
