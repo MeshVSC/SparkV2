@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { 
   Trophy, 
   Star, 
@@ -127,6 +127,9 @@ export function AchievementCenter({ isOpen, onOpenChange }: AchievementCenterPro
             <Trophy className="h-5 w-5" />
             Achievement Center
           </DialogTitle>
+          <DialogDescription>
+            Track your progress and unlock achievements as you grow your sparks and complete todos.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-6">
           {/* Progress Overview */}

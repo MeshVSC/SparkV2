@@ -211,7 +211,7 @@ export class AchievementEngine {
       await db.user.update({
         where: { id: userId },
         data: {
-          xp: {
+          totalXP: {
             increment: achievement.xpReward,
           },
           level: {

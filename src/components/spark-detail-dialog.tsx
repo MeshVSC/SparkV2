@@ -5,12 +5,13 @@ import { useSpark } from "@/contexts/spark-context"
 import { Spark } from "@/types/spark"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { FileUploader } from "@/components/file-uploader"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { SparkStatus } from "@/types/spark"
+import { AddTodoDialog } from "@/components/add-todo-dialog"
 import { X, Link, Link2, Plus, Target } from "lucide-react"
 import {
   MDXEditor,
@@ -54,6 +55,7 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
   const [editorRef, setEditorRef] = useState<MDXEditorMethods | null>(null)
   const [showConnectionDialog, setShowConnectionDialog] = useState(false)
   const [selectedSparkToConnect, setSelectedSparkToConnect] = useState<string>("")
+  const [showTodoDialog, setShowTodoDialog] = useState(false)
 
   useEffect(() => {
     if (spark) {
@@ -172,6 +174,9 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
         <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Spark Details</DialogTitle>
+            <DialogDescription>
+              Update your spark's information, content, and settings. Changes are saved automatically.
+            </DialogDescription>
           </DialogHeader>
           
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -311,18 +316,7 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    const title = prompt("Enter todo title:")
-                    if (title?.trim()) {
-                      actions.addTodo(spark.id, {
-                        title: title.trim(),
-                        description: "",
-                        type: "GENERAL" as any,
-                        priority: "MEDIUM" as any,
-                        completed: false,
-                      })
-                    }
-                  }}
+                  onClick={() => setShowTodoDialog(true)}
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   Add Todo
@@ -424,6 +418,9 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle>Connect to Another Spark</DialogTitle>
+            <DialogDescription>
+              Create a connection between related sparks to build a network of ideas and track their relationships.
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
@@ -457,6 +454,13 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Add Todo Dialog */}
+      <AddTodoDialog 
+        open={showTodoDialog} 
+        onOpenChange={setShowTodoDialog}
+        onAddTodo={(todoData) => actions.addTodo(spark.id, todoData)}
+      />
     </>
   )
 }

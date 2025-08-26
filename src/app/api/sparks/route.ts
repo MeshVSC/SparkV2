@@ -67,14 +67,14 @@ export async function POST(request: NextRequest) {
     
     // Award XP for creating spark
     const xpAward = 10
-    const newUserXp = user.xp + xpAward
+    const newUserXp = user.totalXP + xpAward
     const newUserLevel = Math.floor(newUserXp / 100) + 1
     
     // Update user XP and level
     await db.user.update({
       where: { id: user.id },
       data: {
-        xp: newUserXp,
+        totalXP: newUserXp,
         level: newUserLevel,
       },
     })

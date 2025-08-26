@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useSession } from "next-auth/react"
 import { useSpark } from "@/contexts/spark-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,12 +23,23 @@ import {
 import { CreateSparkDialog } from "@/components/create-spark-dialog"
 import { AchievementCenter } from "@/components/achievement-center"
 import { UserAvatar } from "@/components/auth/user-avatar"
+import Link from "next/link"
 
 export function Sidebar() {
+  const { data: session } = useSession()
   const { state, actions } = useSpark()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isAchievementCenterOpen, setIsAchievementCenterOpen] = useState(false)
   const [searchInput, setSearchInput] = useState("")
+
+  const handleCreateSpark = () => {
+    if (session) {
+      setIsCreateDialogOpen(true)
+    } else {
+      // Redirect to sign in page if not authenticated
+      window.location.href = '/auth/signin'
+    }
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -76,12 +88,12 @@ export function Sidebar() {
         </form>
 
         <Button 
-          onClick={() => setIsCreateDialogOpen(true)}
+          onClick={handleCreateSpark}
           className="w-full"
           size="sm"
         >
           <Plus className="h-4 w-4 mr-2" />
-          New Spark
+          {session ? "New Spark" : "Sign In to Create"}
         </Button>
       </div>
 

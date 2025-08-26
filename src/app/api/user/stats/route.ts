@@ -1,22 +1,29 @@
 import { NextRequest, NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { db } from "@/lib/db"
 
 export async function GET(request: NextRequest) {
   try {
-    // Get or create default user
-    let user = await db.user.findUnique({
-      where: { email: "default@example.com" },
+    // Get authenticated user
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      )
+    }
+    
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
     })
     
     if (!user) {
-      user = await db.user.create({
-        data: {
-          email: "default@example.com",
-          name: "Default User",
-          xp: 0,
-          level: 1,
-        },
-      })
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      )
     }
 
     // Get user's sparks
@@ -44,7 +51,7 @@ export async function GET(request: NextRequest) {
     // Calculate level progress
     const xpForCurrentLevel = (user.level - 1) * 100
     const xpForNextLevel = user.level * 100
-    const levelProgress = ((user.xp - xpForCurrentLevel) / 100) * 100
+    const levelProgress = ((user.totalXP - xpForCurrentLevel) / 100) * 100
 
     // Status breakdown
     const statusBreakdown = sparks.reduce((acc, spark) => {
@@ -56,10 +63,10 @@ export async function GET(request: NextRequest) {
       user: {
         id: user.id,
         name: user.name,
-        xp: user.xp,
+        totalXP: user.totalXP,
         level: user.level,
         levelProgress,
-        xpToNextLevel: xpForNextLevel - user.xp,
+        xpToNextLevel: xpForNextLevel - user.totalXP,
       },
       sparks: {
         total: totalSparks,

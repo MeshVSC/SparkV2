@@ -5,7 +5,7 @@ import { useSpark } from "@/contexts/spark-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { SparkStatus } from "@/types/spark"
@@ -61,7 +61,16 @@ export function CreateSparkDialog({ open, onOpenChange, initialStatus }: CreateS
       onOpenChange(false)
     } catch (error) {
       console.error("Error creating spark:", error)
-      alert("Failed to create spark. Please try again.")
+      
+      // Handle authentication errors
+      if (error instanceof Error && error.message.includes("Authentication required")) {
+        alert("Please sign in to create sparks. Redirecting to sign-in page...")
+        setTimeout(() => {
+          window.location.href = '/auth/signin'
+        }, 1000)
+      } else {
+        alert("Failed to create spark. Please try again.")
+      }
     }
   }
 
@@ -83,6 +92,9 @@ export function CreateSparkDialog({ open, onOpenChange, initialStatus }: CreateS
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Create New Spark</DialogTitle>
+          <DialogDescription>
+            Create a new spark to capture your ideas and start growing them into reality.
+          </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">

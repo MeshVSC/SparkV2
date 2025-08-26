@@ -52,59 +52,61 @@ export async function PUT(
       )
     }
 
+    // Get the spark early for both XP and achievement logic
+    const spark = await db.spark.findUnique({
+      where: { id: params.id },
+    })
+
     // Check if todo is being marked as completed (was not completed before)
     const isCompleted = body.completed
     const wasCompleted = existingTodo.completed
     
     let xpAward = 0
-    if (isCompleted && !wasCompleted) {
+    if (isCompleted && !wasCompleted && spark) {
       // Award XP for completing todo
       xpAward = 20
       
-      // Get the spark to update its XP
-      const spark = await db.spark.findUnique({
+      const newSparkXp = spark.xp + xpAward
+      const newSparkLevel = Math.floor(newSparkXp / 100) + 1
+      
+      // Update spark XP and level
+      await db.spark.update({
         where: { id: params.id },
+        data: {
+          xp: newSparkXp,
+          level: newSparkLevel,
+        },
       })
       
-      if (spark) {
-        const newSparkXp = spark.xp + xpAward
-        const newSparkLevel = Math.floor(newSparkXp / 100) + 1
+      // Get user to update their XP
+      const user = await db.user.findUnique({
+        where: { id: spark.userId },
+      })
+      
+      if (user) {
+        const newUserXp = user.totalXP + xpAward
+        const newUserLevel = Math.floor(newUserXp / 100) + 1
         
-        // Update spark XP and level
-        await db.spark.update({
-          where: { id: params.id },
+        await db.user.update({
+          where: { id: user.id },
           data: {
-            xp: newSparkXp,
-            level: newSparkLevel,
+            totalXP: newUserXp,
+            level: newUserLevel,
           },
         })
-        
-        // Get user to update their XP
-        const user = await db.user.findUnique({
-          where: { id: spark.userId },
-        })
-        
-        if (user) {
-          const newUserXp = user.xp + xpAward
-          const newUserLevel = Math.floor(newUserXp / 100) + 1
-          
-          await db.user.update({
-            where: { id: user.id },
-            data: {
-              xp: newUserXp,
-              level: newUserLevel,
-            },
-          })
-        }
       }
     }
 
     // Check for achievements when completing a todo
     if (isCompleted && !wasCompleted && spark) {
       try {
-        await AchievementEngine.checkAndAwardAchievements(spark.userId, "complete_todo", { 
-          sparkId: params.id, 
-          todoId: params.todoId 
+        await AchievementEngine.checkAndAwardAchievements({
+          type: "TODO_COMPLETED",
+          userId: spark.userId,
+          data: { 
+            sparkId: params.id, 
+            todoId: params.todoId 
+          }
         })
       } catch (achievementError) {
         console.error("Error checking achievements:", achievementError)

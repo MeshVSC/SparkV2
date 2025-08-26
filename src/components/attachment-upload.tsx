@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Attachment, AttachmentType } from "@/types/spark"
@@ -146,6 +146,9 @@ export function AttachmentUpload({
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add Attachment</DialogTitle>
+              <DialogDescription>
+                Add a file or link to your spark to enhance it with additional resources and references.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="flex gap-2">

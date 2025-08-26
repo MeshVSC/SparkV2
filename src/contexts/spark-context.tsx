@@ -171,6 +171,7 @@ interface SparkContextType {
     deleteTodo: (sparkId: string, todoId: string) => Promise<void>
     uploadAttachment: (sparkId: string, file: File) => Promise<void>
     deleteAttachment: (sparkId: string, attachmentId: string) => Promise<void>
+    loadUserStats: () => Promise<void>
   }
 }
 
@@ -192,13 +193,29 @@ export function SparkProvider({ children }: { children: React.ReactNode }) {
       }
     },
 
+    loadUserStats: async () => {
+      try {
+        const stats = await sparkApi.getUserStats()
+        dispatch({ type: "SET_USER_STATS", payload: stats })
+      } catch (error) {
+        console.error("Failed to load user stats:", error)
+      }
+    },
+
     createSpark: async (sparkData: CreateSparkData) => {
       try {
         const spark = await sparkApi.create(sparkData)
         dispatch({ type: "ADD_SPARK", payload: spark })
       } catch (error) {
         console.error("SparkContext: Error creating spark:", error)
-        dispatch({ type: "SET_ERROR", payload: "Failed to create spark" })
+        
+        // Handle authentication errors specifically
+        if (error instanceof Error && error.message.includes("401")) {
+          dispatch({ type: "SET_ERROR", payload: "Authentication required. Please sign in to create sparks." })
+        } else {
+          dispatch({ type: "SET_ERROR", payload: "Failed to create spark" })
+        }
+        
         throw error // Re-throw to let the dialog handle it
       }
     },

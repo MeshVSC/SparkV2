@@ -7,11 +7,14 @@ class SparkAPI {
         "Content-Type": "application/json",
         ...options.headers,
       },
+      credentials: "include", // Include cookies for authentication
       ...options,
     })
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      const errorData = await response.json().catch(() => ({}))
+      const errorMessage = errorData.error || `HTTP error! status: ${response.status}`
+      throw new Error(errorMessage)
     }
 
     return response.json()
@@ -77,7 +80,7 @@ class SparkAPI {
   }
 
   async getUserStats(): Promise<any> {
-    return this.request<any>("/api/user/stats")
+    return this.request<any>("/user/stats")
   }
 
   async getAttachments(sparkId: string): Promise<Attachment[]> {
