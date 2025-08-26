@@ -190,7 +190,7 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <Select value={formData.status} onValueChange={(value) => handleInputChange("status", value)}>
-                  <SelectTrigger>
+                  <SelectTrigger id="status">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

@@ -141,7 +141,7 @@ export function TodoList({ sparkId, todos, onTodoUpdate, onTodoDelete, onTodoAdd
                 <div className="space-y-2">
                   <Label htmlFor="todo-type">Type</Label>
                   <Select value={newTodo.type} onValueChange={(value) => setNewTodo(prev => ({ ...prev, type: value as TodoType }))}>
-                    <SelectTrigger>
+                    <SelectTrigger id="todo-type">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -154,7 +154,7 @@ export function TodoList({ sparkId, todos, onTodoUpdate, onTodoDelete, onTodoAdd
                 <div className="space-y-2">
                   <Label htmlFor="todo-priority">Priority</Label>
                   <Select value={newTodo.priority} onValueChange={(value) => setNewTodo(prev => ({ ...prev, priority: value as TodoPriority }))}>
-                    <SelectTrigger>
+                    <SelectTrigger id="todo-priority">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

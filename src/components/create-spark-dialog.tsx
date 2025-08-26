@@ -43,21 +43,26 @@ export function CreateSparkDialog({ open, onOpenChange, initialStatus }: CreateS
       positionY: Math.random() * 500,
     }
 
-    await actions.createSpark(sparkData)
-    
-    // Refresh user stats after XP award
-    actions.loadUserStats()
-    
-    // Reset form
-    setFormData({
-      title: "",
-      description: "",
-      status: SparkStatus.SEEDLING,
-      color: "#10b981",
-      tags: "",
-    })
-    
-    onOpenChange(false)
+    try {
+      await actions.createSpark(sparkData)
+      
+      // Refresh user stats after XP award
+      actions.loadUserStats()
+      
+      // Reset form
+      setFormData({
+        title: "",
+        description: "",
+        status: SparkStatus.SEEDLING,
+        color: "#10b981",
+        tags: "",
+      })
+      
+      onOpenChange(false)
+    } catch (error) {
+      console.error("Error creating spark:", error)
+      alert("Failed to create spark. Please try again.")
+    }
   }
 
   const handleInputChange = (field: string, value: string) => {
@@ -106,7 +111,7 @@ export function CreateSparkDialog({ open, onOpenChange, initialStatus }: CreateS
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
             <Select value={formData.status} onValueChange={(value) => handleInputChange("status", value)}>
-              <SelectTrigger>
+              <SelectTrigger id="status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

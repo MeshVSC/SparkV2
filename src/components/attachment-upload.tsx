@@ -172,7 +172,7 @@ export function AttachmentUpload({
                   <div className="space-y-2">
                     <Label htmlFor="file-type">Type</Label>
                     <Select value={fileType} onValueChange={(value) => setFileType(value as AttachmentType)}>
-                      <SelectTrigger>
+                      <SelectTrigger id="file-type">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

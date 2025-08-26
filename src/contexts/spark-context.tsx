@@ -197,7 +197,9 @@ export function SparkProvider({ children }: { children: React.ReactNode }) {
         const spark = await sparkApi.create(sparkData)
         dispatch({ type: "ADD_SPARK", payload: spark })
       } catch (error) {
+        console.error("SparkContext: Error creating spark:", error)
         dispatch({ type: "SET_ERROR", payload: "Failed to create spark" })
+        throw error // Re-throw to let the dialog handle it
       }
     },
 

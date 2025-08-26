@@ -1,10 +1,24 @@
 import { NextRequest, NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { AchievementEngine } from "@/lib/achievement-engine"
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      )
+    }
+    
     const sparks = await db.spark.findMany({
+      where: {
+        userId: session.user.id,
+      },
       include: {
         todos: true,
         attachments: true,
@@ -29,20 +43,26 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    // Get or create default user
-    let user = await db.user.findUnique({
-      where: { email: "default@example.com" },
+    // Get the authenticated user from the session
+    const session = await getServerSession(authOptions)
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      )
+    }
+    
+    // Get the user from the database
+    const user = await db.user.findUnique({
+      where: { id: session.user.id },
     })
     
     if (!user) {
-      user = await db.user.create({
-        data: {
-          email: "default@example.com",
-          name: "Default User",
-          xp: 0,
-          level: 1,
-        },
-      })
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      )
     }
     
     // Award XP for creating spark

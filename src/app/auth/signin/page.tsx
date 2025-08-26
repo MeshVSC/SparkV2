@@ -61,10 +61,46 @@ export default function SignIn() {
 
             {/* Sign Up Tab */}
             <TabsContent value="signup" className="space-y-4">
-              <form onSubmit={(e) => {
+              <form onSubmit={async (e) => {
                 e.preventDefault()
-                // TODO: Implement sign up logic
-                console.log("Sign up:", formData)
+                setLoading(true)
+                try {
+                  const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData),
+                  })
+                  
+                  if (response.ok) {
+                    // After successful registration, sign in the user
+                    const signInResponse = await fetch('/api/auth/signin', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        email: formData.email,
+                        password: formData.password,
+                      }),
+                    })
+                    
+                    if (signInResponse.ok) {
+                      handleAuthSuccess()
+                    } else {
+                      alert('Account created but sign in failed. Please try signing in manually.')
+                    }
+                  } else {
+                    const error = await response.json()
+                    alert(error.message || 'Registration failed')
+                  }
+                } catch (error) {
+                  console.error('Registration error:', error)
+                  alert('An error occurred during registration')
+                } finally {
+                  setLoading(false)
+                }
               }} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Name</Label>
@@ -118,7 +154,7 @@ export default function SignIn() {
                 </div>
 
                 <Button type="submit" className="w-full" disabled={loading}>
-                  Create Account
+                  {loading ? 'Creating Account...' : 'Create Account'}
                 </Button>
               </form>
             </TabsContent>
