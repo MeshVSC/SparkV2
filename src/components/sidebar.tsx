@@ -3,12 +3,14 @@
 import { useState } from "react"
 import { useSession } from "next-auth/react"
 import { useSpark } from "@/contexts/spark-context"
+import { useGuest } from "@/contexts/guest-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { 
   Plus, 
   Search, 
@@ -18,27 +20,24 @@ import {
   Settings,
   Sparkles,
   Target,
-  Trophy
+  Trophy,
+  AlertTriangle
 } from "lucide-react"
 import { CreateSparkDialog } from "@/components/create-spark-dialog"
 import { AchievementCenter } from "@/components/achievement-center"
-import { UserAvatar } from "@/components/auth/user-avatar"
+import { UserAvatar } from "@/components/user-avatar"
 import Link from "next/link"
 
 export function Sidebar() {
   const { data: session } = useSession()
   const { state, actions } = useSpark()
+  const { isGuest, guestData } = useGuest()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isAchievementCenterOpen, setIsAchievementCenterOpen] = useState(false)
   const [searchInput, setSearchInput] = useState("")
 
   const handleCreateSpark = () => {
-    if (session) {
-      setIsCreateDialogOpen(true)
-    } else {
-      // Redirect to sign in page if not authenticated
-      window.location.href = '/auth/signin'
-    }
+    setIsCreateDialogOpen(true)
   }
 
   const handleSearch = (e: React.FormEvent) => {
@@ -77,6 +76,16 @@ export function Sidebar() {
           <UserAvatar />
         </div>
         
+        {/* Guest mode warning */}
+        {isGuest && (
+          <Alert className="mb-4 border-amber-200 bg-amber-50">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-700 text-sm">
+              Your work is saved locally. <Link href="/auth/signin" className="underline font-medium">Sign in</Link> to save it permanently.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <form onSubmit={handleSearch} className="relative mb-4">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -93,7 +102,7 @@ export function Sidebar() {
           size="sm"
         >
           <Plus className="h-4 w-4 mr-2" />
-          {session ? "New Spark" : "Sign In to Create"}
+          New Spark
         </Button>
       </div>
 

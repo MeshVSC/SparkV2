@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { AchievementProvider } from "@/components/achievement-provider";
 import { AuthProvider } from "@/components/auth-provider";
+import { GuestProvider } from "@/contexts/guest-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,12 +45,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        <AuthProvider>
-          <AchievementProvider>
-            {children}
-            <Toaster />
-          </AchievementProvider>
-        </AuthProvider>
+        <GuestProvider>
+          <AuthProvider>
+            <AchievementProvider>
+              {children}
+              <Toaster />
+            </AchievementProvider>
+          </AuthProvider>
+        </GuestProvider>
       </body>
     </html>
   );

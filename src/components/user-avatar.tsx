@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { UserMenu } from "@/components/auth/user-menu"
+import { UserMenu } from "@/components/user-menu"
 import Link from "next/link"
 
 interface UserAvatarProps {

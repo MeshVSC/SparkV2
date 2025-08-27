@@ -4,6 +4,7 @@ import React, { createContext, useContext, useReducer, useEffect } from "react"
 import { Spark, Todo, Attachment, CreateSparkData } from "@/types/spark"
 import { AchievementService } from "@/lib/achievement-service"
 import { sparkApi } from "@/lib/api/spark-api"
+import { useGuest } from "@/contexts/guest-context"
 
 interface SparkState {
   sparks: Spark[]
@@ -179,13 +180,22 @@ const SparkContext = createContext<SparkContextType | undefined>(undefined)
 
 export function SparkProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(sparkReducer, initialState)
+  const { isGuest, guestData, saveGuestData, loadGuestData } = useGuest()
 
   const actions = {
     loadSparks: async () => {
       dispatch({ type: "SET_LOADING", payload: true })
       try {
-        const sparks = await sparkApi.getAll()
-        dispatch({ type: "SET_SPARKS", payload: sparks })
+        if (isGuest) {
+          // Load from guest storage
+          const guestData = loadGuestData()
+          const sparks = guestData?.sparks || []
+          dispatch({ type: "SET_SPARKS", payload: sparks })
+        } else {
+          // Load from API
+          const sparks = await sparkApi.getAll()
+          dispatch({ type: "SET_SPARKS", payload: sparks })
+        }
       } catch (error) {
         dispatch({ type: "SET_ERROR", payload: "Failed to load sparks" })
       } finally {
@@ -195,8 +205,10 @@ export function SparkProvider({ children }: { children: React.ReactNode }) {
 
     loadUserStats: async () => {
       try {
-        const stats = await sparkApi.getUserStats()
-        dispatch({ type: "SET_USER_STATS", payload: stats })
+        if (!isGuest) {
+          const stats = await sparkApi.getUserStats()
+          dispatch({ type: "SET_USER_STATS", payload: stats })
+        }
       } catch (error) {
         console.error("Failed to load user stats:", error)
       }
@@ -204,26 +216,54 @@ export function SparkProvider({ children }: { children: React.ReactNode }) {
 
     createSpark: async (sparkData: CreateSparkData) => {
       try {
-        const spark = await sparkApi.create(sparkData)
-        dispatch({ type: "ADD_SPARK", payload: spark })
+        if (isGuest) {
+          // Create spark in guest storage
+          const newSpark: Spark = {
+            ...sparkData,
+            id: `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            userId: "guest",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            todos: [],
+            attachments: [],
+          }
+          
+          const currentGuestData = loadGuestData() || { sparks: [], todos: [], preferences: {} }
+          const updatedSparks = [...(currentGuestData.sparks || []), newSpark]
+          
+          saveGuestData({ sparks: updatedSparks })
+          dispatch({ type: "ADD_SPARK", payload: newSpark })
+        } else {
+          // Create spark via API
+          const spark = await sparkApi.create(sparkData)
+          dispatch({ type: "ADD_SPARK", payload: spark })
+        }
       } catch (error) {
         console.error("SparkContext: Error creating spark:", error)
-        
-        // Handle authentication errors specifically
-        if (error instanceof Error && error.message.includes("401")) {
-          dispatch({ type: "SET_ERROR", payload: "Authentication required. Please sign in to create sparks." })
-        } else {
-          dispatch({ type: "SET_ERROR", payload: "Failed to create spark" })
-        }
-        
-        throw error // Re-throw to let the dialog handle it
+        dispatch({ type: "SET_ERROR", payload: "Failed to create spark" })
+        throw error
       }
     },
 
     updateSpark: async (id: string, updates: Partial<Spark>) => {
       try {
-        const spark = await sparkApi.update(id, updates)
-        dispatch({ type: "UPDATE_SPARK", payload: spark })
+        if (isGuest) {
+          // Update spark in guest storage
+          const currentGuestData = loadGuestData()
+          const updatedSparks = currentGuestData?.sparks?.map(spark =>
+            spark.id === id ? { ...spark, ...updates, updatedAt: new Date().toISOString() } : spark
+          ) || []
+          
+          saveGuestData({ sparks: updatedSparks })
+          const updatedSpark = updatedSparks.find(spark => spark.id === id)
+          if (updatedSpark) {
+            dispatch({ type: "UPDATE_SPARK", payload: updatedSpark })
+          }
+        } else {
+          // Update spark via API
+          const spark = await sparkApi.update(id, updates)
+          dispatch({ type: "UPDATE_SPARK", payload: spark })
+        }
       } catch (error) {
         dispatch({ type: "SET_ERROR", payload: "Failed to update spark" })
       }
@@ -231,8 +271,18 @@ export function SparkProvider({ children }: { children: React.ReactNode }) {
 
     deleteSpark: async (id: string) => {
       try {
-        await sparkApi.delete(id)
-        dispatch({ type: "DELETE_SPARK", payload: id })
+        if (isGuest) {
+          // Delete spark from guest storage
+          const currentGuestData = loadGuestData()
+          const updatedSparks = currentGuestData?.sparks?.filter(spark => spark.id !== id) || []
+          
+          saveGuestData({ sparks: updatedSparks })
+          dispatch({ type: "DELETE_SPARK", payload: id })
+        } else {
+          // Delete spark via API
+          await sparkApi.delete(id)
+          dispatch({ type: "DELETE_SPARK", payload: id })
+        }
       } catch (error) {
         dispatch({ type: "SET_ERROR", payload: "Failed to delete spark" })
       }
@@ -244,6 +294,14 @@ export function SparkProvider({ children }: { children: React.ReactNode }) {
 
     setViewMode: (mode: "canvas" | "kanban" | "timeline") => {
       dispatch({ type: "SET_VIEW_MODE", payload: mode })
+      if (isGuest) {
+        const currentGuestData = loadGuestData()
+        const updatedPreferences = {
+          ...(currentGuestData?.preferences || {}),
+          viewMode: mode
+        }
+        saveGuestData({ preferences: updatedPreferences })
+      }
     },
 
     setSearchQuery: (query: string) => {
@@ -252,8 +310,28 @@ export function SparkProvider({ children }: { children: React.ReactNode }) {
 
     addTodo: async (sparkId: string, todoData: Omit<Todo, "id" | "createdAt">) => {
       try {
-        const todo = await sparkApi.addTodo(sparkId, todoData)
-        dispatch({ type: "ADD_TODO", payload: { sparkId, todo } })
+        if (isGuest) {
+          // Add todo to guest storage
+          const newTodo: Todo = {
+            ...todoData,
+            id: `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            createdAt: new Date().toISOString(),
+          }
+          
+          const currentGuestData = loadGuestData()
+          const updatedSparks = currentGuestData?.sparks?.map(spark =>
+            spark.id === sparkId
+              ? { ...spark, todos: [...(spark.todos || []), newTodo] }
+              : spark
+          ) || []
+          
+          saveGuestData({ sparks: updatedSparks })
+          dispatch({ type: "ADD_TODO", payload: { sparkId, todo: newTodo } })
+        } else {
+          // Add todo via API
+          const todo = await sparkApi.addTodo(sparkId, todoData)
+          dispatch({ type: "ADD_TODO", payload: { sparkId, todo } })
+        }
       } catch (error) {
         dispatch({ type: "SET_ERROR", payload: "Failed to add todo" })
       }
@@ -261,8 +339,33 @@ export function SparkProvider({ children }: { children: React.ReactNode }) {
 
     updateTodo: async (sparkId: string, todoId: string, updates: Partial<Todo>) => {
       try {
-        const todo = await sparkApi.updateTodo(sparkId, todoId, updates)
-        dispatch({ type: "UPDATE_TODO", payload: { sparkId, todo } })
+        if (isGuest) {
+          // Update todo in guest storage
+          const currentGuestData = loadGuestData()
+          const updatedSparks = currentGuestData?.sparks?.map(spark =>
+            spark.id === sparkId
+              ? {
+                  ...spark,
+                  todos: spark.todos?.map(todo =>
+                    todo.id === todoId ? { ...todo, ...updates } : todo
+                  ) || [],
+                }
+              : spark
+          ) || []
+          
+          saveGuestData({ sparks: updatedSparks })
+          const updatedTodo = updatedSparks
+            .find(spark => spark.id === sparkId)
+            ?.todos?.find(todo => todo.id === todoId)
+          
+          if (updatedTodo) {
+            dispatch({ type: "UPDATE_TODO", payload: { sparkId, todo: updatedTodo } })
+          }
+        } else {
+          // Update todo via API
+          const todo = await sparkApi.updateTodo(sparkId, todoId, updates)
+          dispatch({ type: "UPDATE_TODO", payload: { sparkId, todo } })
+        }
       } catch (error) {
         dispatch({ type: "SET_ERROR", payload: "Failed to update todo" })
       }
@@ -270,8 +373,25 @@ export function SparkProvider({ children }: { children: React.ReactNode }) {
 
     deleteTodo: async (sparkId: string, todoId: string) => {
       try {
-        await sparkApi.deleteTodo(sparkId, todoId)
-        dispatch({ type: "DELETE_TODO", payload: { sparkId, todoId } })
+        if (isGuest) {
+          // Delete todo from guest storage
+          const currentGuestData = loadGuestData()
+          const updatedSparks = currentGuestData?.sparks?.map(spark =>
+            spark.id === sparkId
+              ? {
+                  ...spark,
+                  todos: spark.todos?.filter(todo => todo.id !== todoId) || [],
+                }
+              : spark
+          ) || []
+          
+          saveGuestData({ sparks: updatedSparks })
+          dispatch({ type: "DELETE_TODO", payload: { sparkId, todoId } })
+        } else {
+          // Delete todo via API
+          await sparkApi.deleteTodo(sparkId, todoId)
+          dispatch({ type: "DELETE_TODO", payload: { sparkId, todoId } })
+        }
       } catch (error) {
         dispatch({ type: "SET_ERROR", payload: "Failed to delete todo" })
       }
@@ -279,21 +399,48 @@ export function SparkProvider({ children }: { children: React.ReactNode }) {
 
     uploadAttachment: async (sparkId: string, file: File) => {
       try {
-        const formData = new FormData()
-        formData.append("file", file)
-        formData.append("type", "FILE")
+        if (isGuest) {
+          // For guest mode, create a simple attachment object
+          const newAttachment: Attachment = {
+            id: `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            sparkId,
+            filename: file.name,
+            url: URL.createObjectURL(file), // Create a local URL for the file
+            type: "FILE",
+            size: file.size,
+            createdAt: new Date().toISOString(),
+          }
+          
+          const currentGuestData = loadGuestData()
+          const updatedSparks = currentGuestData?.sparks?.map(spark =>
+            spark.id === sparkId
+              ? { 
+                  ...spark, 
+                  attachments: [...(spark.attachments || []), newAttachment] 
+                }
+              : spark
+          ) || []
+          
+          saveGuestData({ sparks: updatedSparks })
+          dispatch({ type: "ADD_ATTACHMENT", payload: { sparkId, attachment: newAttachment } })
+        } else {
+          // Upload attachment via API
+          const formData = new FormData()
+          formData.append("file", file)
+          formData.append("type", "FILE")
 
-        const response = await fetch(`/api/sparks/${sparkId}/attachments`, {
-          method: "POST",
-          body: formData,
-        })
+          const response = await fetch(`/api/sparks/${sparkId}/attachments`, {
+            method: "POST",
+            body: formData,
+          })
 
-        if (!response.ok) {
-          throw new Error("Failed to upload attachment")
+          if (!response.ok) {
+            throw new Error("Failed to upload attachment")
+          }
+
+          const attachment = await response.json()
+          dispatch({ type: "ADD_ATTACHMENT", payload: { sparkId, attachment } })
         }
-
-        const attachment = await response.json()
-        dispatch({ type: "ADD_ATTACHMENT", payload: { sparkId, attachment } })
       } catch (error) {
         dispatch({ type: "SET_ERROR", payload: "Failed to upload attachment" })
       }
@@ -301,10 +448,27 @@ export function SparkProvider({ children }: { children: React.ReactNode }) {
 
     deleteAttachment: async (sparkId: string, attachmentId: string) => {
       try {
-        await fetch(`/api/attachments/${attachmentId}`, {
-          method: "DELETE",
-        })
-        dispatch({ type: "DELETE_ATTACHMENT", payload: { sparkId, attachmentId } })
+        if (isGuest) {
+          // Delete attachment from guest storage
+          const currentGuestData = loadGuestData()
+          const updatedSparks = currentGuestData?.sparks?.map(spark =>
+            spark.id === sparkId
+              ? {
+                  ...spark,
+                  attachments: spark.attachments?.filter(att => att.id !== attachmentId) || [],
+                }
+              : spark
+          ) || []
+          
+          saveGuestData({ sparks: updatedSparks })
+          dispatch({ type: "DELETE_ATTACHMENT", payload: { sparkId, attachmentId } })
+        } else {
+          // Delete attachment via API
+          await fetch(`/api/attachments/${attachmentId}`, {
+            method: "DELETE",
+          })
+          dispatch({ type: "DELETE_ATTACHMENT", payload: { sparkId, attachmentId } })
+        }
       } catch (error) {
         dispatch({ type: "SET_ERROR", payload: "Failed to delete attachment" })
       }
@@ -313,7 +477,7 @@ export function SparkProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     actions.loadSparks()
-  }, [])
+  }, [isGuest])
 
   return (
     <SparkContext.Provider value={{ state, dispatch, actions }}>
