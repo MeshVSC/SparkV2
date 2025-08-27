@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react"
 import { useSpark } from "@/contexts/spark-context"
 import { SparkCard } from "@/components/spark-card"
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, PointerSensor, useSensor, useSensors, useDraggable } from "@dnd-kit/core"
 import { Spark } from "@/types/spark"
 
 interface ConnectionLine {
@@ -14,6 +14,29 @@ interface ConnectionLine {
   fromY: number
   toX: number
   toY: number
+}
+
+// Draggable Spark Card Component
+function DraggableSparkCard({ spark, isSelected, onClick }: { spark: Spark; isSelected: boolean; onClick: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: spark.id,
+  })
+
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    opacity: isDragging ? 0.5 : 1,
+  } : undefined
+
+  return (
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
+      <SparkCard
+        spark={spark}
+        isSelected={isSelected}
+        onClick={onClick}
+        isDragging={isDragging}
+      />
+    </div>
+  )
 }
 
 export function SparkCanvas() {
@@ -67,16 +90,18 @@ export function SparkCanvas() {
   }, [state.sparks])
 
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
-    const { active, over } = event
+    const { active, delta } = event
 
-    if (over && active.id !== over.id) {
-      const spark = state.sparks.find(s => s.id === active.id)
-      if (spark) {
-        await actions.updateSpark(spark.id, {
-          positionX: Math.random() * 600,
-          positionY: Math.random() * 400,
-        })
-      }
+    const spark = state.sparks.find(s => s.id === active.id)
+    if (spark) {
+      // Calculate new position based on current position + drag delta
+      const newPositionX = Math.max(0, (spark.positionX || 0) + delta.x)
+      const newPositionY = Math.max(0, (spark.positionY || 0) + delta.y)
+      
+      await actions.updateSpark(spark.id, {
+        positionX: newPositionX,
+        positionY: newPositionY,
+      })
     }
 
     setActiveSpark(null)
@@ -167,7 +192,7 @@ export function SparkCanvas() {
         {filteredSparks.map((spark) => (
           <div
             key={spark.id}
-            className="absolute cursor-move transition-all duration-200 hover:scale-105"
+            className="absolute transition-all duration-200 hover:scale-105"
             style={{
               left: spark.positionX || Math.random() * 600,
               top: spark.positionY || Math.random() * 400,
@@ -175,7 +200,7 @@ export function SparkCanvas() {
               zIndex: state.selectedSpark?.id === spark.id ? 10 : 1,
             }}
           >
-            <SparkCard
+            <DraggableSparkCard
               spark={spark}
               isSelected={state.selectedSpark?.id === spark.id}
               onClick={() => actions.selectSpark(spark)}

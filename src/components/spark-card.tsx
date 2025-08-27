@@ -29,9 +29,10 @@ interface SparkCardProps {
   spark: Spark
   isSelected: boolean
   onClick: () => void
+  isDragging?: boolean
 }
 
-export function SparkCard({ spark, isSelected, onClick }: SparkCardProps) {
+export function SparkCard({ spark, isSelected, onClick, isDragging = false }: SparkCardProps) {
   const { actions } = useSpark()
   const [showDetailDialog, setShowDetailDialog] = useState(false)
   const [showTodos, setShowTodos] = useState(false)
@@ -80,6 +81,7 @@ export function SparkCard({ spark, isSelected, onClick }: SparkCardProps) {
         className={`
           w-64 shadow-lg transition-all duration-200 cursor-pointer
           ${isSelected ? 'ring-2 ring-primary shadow-xl' : 'hover:shadow-xl'}
+          ${isDragging ? 'opacity-50 shadow-2xl scale-105' : ''}
           border-l-4
         `}
         style={{ borderLeftColor: spark.color }}
