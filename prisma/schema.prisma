@@ -33,6 +33,7 @@ model User {
   sparks          Spark[]
   achievements    UserAchievement[]
   preferences     UserPreferences?
+  notifications   Notification[]
   sessions        Session[]
   accounts        Account[]
   
@@ -130,10 +131,30 @@ model UserPreferences {
   id                String   @id @default(cuid())
   userId            String   @unique
   theme             Theme    @default(AUTO)
-  notifications     Boolean  @default(true)
   soundEnabled      Boolean  @default(true)
   defaultSparkColor String   @default("#10b981")
   viewMode          ViewMode @default(CANVAS)
+  
+  // Notification preferences
+  emailNotifications          Boolean  @default(true)
+  pushNotifications           Boolean  @default(true)
+  inAppNotifications          Boolean  @default(true)
+  
+  // Email notification types
+  emailSparkUpdates           Boolean  @default(true)
+  emailAchievementAlerts      Boolean  @default(true)
+  emailCollaborationNotifications Boolean @default(true)
+  
+  // Push notification types
+  pushSparkUpdates            Boolean  @default(true)
+  pushAchievementAlerts       Boolean  @default(true)
+  pushCollaborationNotifications Boolean @default(true)
+  
+  // In-app notification types
+  inAppSparkUpdates           Boolean  @default(true)
+  inAppAchievementAlerts      Boolean  @default(true)
+  inAppCollaborationNotifications Boolean @default(true)
+  
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   
@@ -170,6 +191,26 @@ model Account {
   
   @@unique([provider, providerAccountId])
   @@map("accounts")
+}
+
+model Notification {
+  id                String              @id @default(cuid())
+  userId            String
+  type              NotificationType
+  title             String
+  message           String
+  isRead            Boolean             @default(false)
+  priority          NotificationPriority @default(NORMAL)
+  relatedEntityId   String?
+  relatedEntityType String?
+  createdAt         DateTime            @default(now())
+  expiresAt         DateTime?
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
 }
 
 enum SparkStatus {
@@ -212,4 +253,18 @@ enum ViewMode {
   CANVAS
   KANBAN
   TIMELINE
+}
+
+enum NotificationType {
+  SPARK_UPDATE
+  ACHIEVEMENT
+  COLLABORATION
+  SYSTEM
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
 }
