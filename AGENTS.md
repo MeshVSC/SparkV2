@@ -2,29 +2,30 @@
 
 ## Commands
 
-### Setup
+### Initial Setup
 ```bash
 npm install
-npm run db:push
+npm run db:generate  # Generate Prisma client
 ```
 
 ### Development
-- **Build**: `npm run build`
-- **Lint**: `npm run lint` 
-- **Tests**: No test framework configured
 - **Dev server**: `npm run dev` (Next.js + custom server on port 3000)
+- **Build**: `npm run build`
+- **Production**: `npm start`
+- **Lint**: `npm run lint`
+- **Tests**: No test framework configured
 
-### Database
+### Database (Prisma)
 - **Push schema**: `npm run db:push`
 - **Generate client**: `npm run db:generate`
 - **Migrate**: `npm run db:migrate`
 
 ## Tech Stack
-- Next.js 15 + TypeScript, Tailwind CSS 4, shadcn/ui
-- Database: Prisma + SQLite
-- Auth: NextAuth.js
-- State: Zustand, TanStack Query
-- UI: Framer Motion, Radix UI, DND Kit, Recharts
+- **Framework**: Next.js 15 (App Router), TypeScript 5
+- **UI**: Tailwind CSS 4, shadcn/ui, Framer Motion
+- **Database**: Prisma ORM + SQLite, NextAuth.js
+- **State**: Zustand, TanStack Query, React Hook Form + Zod
+- **Components**: Radix UI, DND Kit, Recharts
 
 ## Architecture
 - App Router structure (`src/app/`)
@@ -33,6 +34,7 @@ npm run db:push
 - Database models for Spark-based productivity app
 
 ## Code Style
-- ESLint configured with relaxed TypeScript/React rules
+- TypeScript strict mode with relaxed ESLint rules
+- shadcn/ui component patterns, CSS variables for theming
+- Path aliases: `@/*` → `./src/*`
 - No comments unless complex
-- Follow existing shadcn/ui patterns
