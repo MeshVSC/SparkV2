@@ -1,4 +1,4 @@
-# AGENTS.md
+# Agent Development Guide
 
 ## Commands
 
@@ -19,6 +19,7 @@ npm run db:generate  # Generate Prisma client
 - **Push schema**: `npm run db:push`
 - **Generate client**: `npm run db:generate`
 - **Migrate**: `npm run db:migrate`
+- **Reset**: `npm run db:reset`
 
 ## Tech Stack
 - **Framework**: Next.js 15 (App Router), TypeScript 5
@@ -37,4 +38,4 @@ npm run db:generate  # Generate Prisma client
 - TypeScript strict mode with relaxed ESLint rules
 - shadcn/ui component patterns, CSS variables for theming
 - Path aliases: `@/*` → `./src/*`
-- No comments unless complex
+- ESLint errors ignored during builds for rapid prototyping
