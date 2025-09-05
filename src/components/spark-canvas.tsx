@@ -5,7 +5,7 @@ import { useSpark } from "@/contexts/spark-context"
 import { useSearch } from "@/contexts/search-context"
 import { SparkCard } from "@/components/spark-card"
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, PointerSensor, useSensor, useSensors, useDraggable } from "@dnd-kit/core"
-import { Spark } from "@/types/spark"
+import { Spark, SparkConnection } from "@/types/spark"
 
 interface ConnectionLine {
   id: string
@@ -15,6 +15,8 @@ interface ConnectionLine {
   fromY: number
   toX: number
   toY: number
+  strength: number
+  connection: SparkConnection
 }
 
 interface TouchGestureState {
@@ -71,6 +73,8 @@ export function SparkCanvas() {
     longPressTimer: null,
     swipeThreshold: 50
   })
+  const [hoveredConnection, setHoveredConnection] = useState<string | null>(null)
+  const [selectedConnection, setSelectedConnection] = useState<ConnectionLine | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -348,6 +352,14 @@ export function SparkCanvas() {
               (line.fromSparkId === spark.id && line.toSparkId === connectedSpark.id) ||
               (line.fromSparkId === connectedSpark.id && line.toSparkId === spark.id)
             )) {
+              // Calculate connection strength based on XP levels and recency
+              const totalXp = spark.xp + connectedSpark.xp
+              const avgLevel = (spark.level + connectedSpark.level) / 2
+              const daysSinceCreation = Math.max(1, 
+                (new Date().getTime() - new Date(connection.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+              )
+              const strength = Math.min(1, (totalXp / 1000 + avgLevel / 10) / Math.sqrt(daysSinceCreation))
+
               lines.push({
                 id: `${spark.id}-${connectedSpark.id}`,
                 fromSparkId: spark.id,
@@ -356,6 +368,50 @@ export function SparkCanvas() {
                 fromY: (spark.positionY || Math.random() * 400) + 100, // Center of card (approximate height)
                 toX: (connectedSpark.positionX || Math.random() * 600) + 128,
                 toY: (connectedSpark.positionY || Math.random() * 400) + 100,
+                strength,
+                connection,
+              })
+            }
+          }
+        })
+      }
+    })
+
+    return lines
+  }, [state.sparks])
+
+  // Calculate connection lines between sparks
+  const getConnectionLines = useCallback((): ConnectionLine[] => {
+    const lines: ConnectionLine[] = []
+
+    state.sparks.forEach(spark => {
+      if (spark.connections && spark.connections.length > 0) {
+        spark.connections.forEach(connection => {
+          const connectedSpark = state.sparks.find(s => s.id === connection.sparkId2)
+          if (connectedSpark) {
+            // Only create line once per connection (avoid duplicates)
+            if (!lines.some(line =>
+              (line.fromSparkId === spark.id && line.toSparkId === connectedSpark.id) ||
+              (line.fromSparkId === connectedSpark.id && line.toSparkId === spark.id)
+            )) {
+              // Calculate connection strength based on XP levels and recency
+              const totalXp = spark.xp + connectedSpark.xp
+              const avgLevel = (spark.level + connectedSpark.level) / 2
+              const daysSinceCreation = Math.max(1, 
+                (new Date().getTime() - new Date(connection.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+              )
+              const strength = Math.min(1, (totalXp / 1000 + avgLevel / 10) / Math.sqrt(daysSinceCreation))
+
+              lines.push({
+                id: `${spark.id}-${connectedSpark.id}`,
+                fromSparkId: spark.id,
+                toSparkId: connectedSpark.id,
+                fromX: (spark.positionX || Math.random() * 600) + 128, // Center of card (card width is 256/2)
+                fromY: (spark.positionY || Math.random() * 400) + 100, // Center of card (approximate height)
+                toX: (connectedSpark.positionX || Math.random() * 600) + 128,
+                toY: (connectedSpark.positionY || Math.random() * 400) + 100,
+                strength,
+                connection,
               })
             }
           }
@@ -435,42 +491,105 @@ export function SparkCanvas() {
         </div>
 
         {/* Connection Lines */}
-        <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
-          {connectionLines.map((line) => (
-            <line
-              key={line.id}
-              x1={line.fromX}
-              y1={line.fromY}
-              x2={line.toX}
-              y2={line.toY}
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeOpacity="0.3"
-              className="text-primary"
-              strokeDasharray="5,5"
-            />
-          ))}
-          {/* Add circles at connection points for better visibility */}
-          {connectionLines.map((line) => (
-            <g key={`${line.id}-points`}>
-              <circle
-                cx={line.fromX}
-                cy={line.fromY}
-                r="4"
-                fill="currentColor"
-                className="text-primary"
-                fillOpacity="0.6"
-              />
-              <circle
-                cx={line.toX}
-                cy={line.toY}
-                r="4"
-                fill="currentColor"
-                className="text-primary"
-                fillOpacity="0.6"
-              />
-            </g>
-          ))}
+        <svg className="absolute inset-0" style={{ zIndex: 0 }}>
+          <defs>
+            <marker
+              id="arrowhead"
+              markerWidth="10"
+              markerHeight="7"
+              refX="9"
+              refY="3.5"
+              orient="auto"
+              className="text-primary fill-primary"
+            >
+              <polygon points="0 0, 10 3.5, 0 7" />
+            </marker>
+            <linearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
+            </linearGradient>
+          </defs>
+          {connectionLines.map((line) => {
+            const isHovered = hoveredConnection === line.id
+            const strokeWidth = Math.max(2, line.strength * 8)
+            const opacity = isHovered ? 0.9 : Math.max(0.3, line.strength * 0.7)
+            
+            // Calculate curve control points for smoother connections
+            const dx = line.toX - line.fromX
+            const dy = line.toY - line.fromY
+            const distance = Math.sqrt(dx * dx + dy * dy)
+            const curvature = Math.min(50, distance * 0.2)
+            
+            const midX = (line.fromX + line.toX) / 2
+            const midY = (line.fromY + line.toY) / 2
+            
+            // Perpendicular offset for curve
+            const perpX = -dy / distance * curvature
+            const perpY = dx / distance * curvature
+            
+            const controlX = midX + perpX
+            const controlY = midY + perpY
+            
+            const pathD = `M ${line.fromX} ${line.fromY} Q ${controlX} ${controlY} ${line.toX} ${line.toY}`
+            
+            return (
+              <g key={line.id}>
+                {/* Invisible thick line for easier hover detection */}
+                <path
+                  d={pathD}
+                  stroke="transparent"
+                  strokeWidth="20"
+                  fill="none"
+                  className="cursor-pointer"
+                  onMouseEnter={() => setHoveredConnection(line.id)}
+                  onMouseLeave={() => setHoveredConnection(null)}
+                  onClick={() => setSelectedConnection(line)}
+                  style={{ pointerEvents: 'stroke' }}
+                />
+                {/* Visible connection line */}
+                <path
+                  d={pathD}
+                  stroke={isHovered ? "hsl(var(--primary))" : "url(#connectionGradient)"}
+                  strokeWidth={strokeWidth}
+                  strokeOpacity={opacity}
+                  fill="none"
+                  markerEnd="url(#arrowhead)"
+                  className={`transition-all duration-300 ${isHovered ? 'filter drop-shadow-lg' : ''}`}
+                  style={{ pointerEvents: 'none' }}
+                />
+                {/* Connection strength indicator dots */}
+                {isHovered && (
+                  <g>
+                    <circle
+                      cx={line.fromX}
+                      cy={line.fromY}
+                      r={6 + line.strength * 4}
+                      fill="hsl(var(--primary))"
+                      fillOpacity="0.7"
+                      className="animate-pulse"
+                    />
+                    <circle
+                      cx={line.toX}
+                      cy={line.toY}
+                      r={6 + line.strength * 4}
+                      fill="hsl(var(--primary))"
+                      fillOpacity="0.7"
+                      className="animate-pulse"
+                    />
+                    {/* Strength indicator at midpoint */}
+                    <circle
+                      cx={midX}
+                      cy={midY}
+                      r={4 + line.strength * 6}
+                      fill="hsl(var(--primary))"
+                      fillOpacity="0.9"
+                      className="animate-pulse"
+                    />
+                  </g>
+                )}
+              </g>
+            )
+          })}
         </svg>
 
         {/* Sparks */}
@@ -505,6 +624,90 @@ export function SparkCanvas() {
               <div>
                 <h3 className="text-lg font-medium mb-1">No sparks yet</h3>
                 <p className="text-muted-foreground">Create your first spark to get started!</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Connection Details Modal */}
+        {selectedConnection && (
+          <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-50">
+            <div className="bg-background border rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Connection Details</h3>
+                <button
+                  onClick={() => setSelectedConnection(null)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium mb-2">Connected Sparks</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: state.sparks.find(s => s.id === selectedConnection.fromSparkId)?.color }}
+                      />
+                      <span>{state.sparks.find(s => s.id === selectedConnection.fromSparkId)?.title}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <span className="ml-1.5">↓</span>
+                      <span>Connected to</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: state.sparks.find(s => s.id === selectedConnection.toSparkId)?.color }}
+                      />
+                      <span>{state.sparks.find(s => s.id === selectedConnection.toSparkId)?.title}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium mb-2">Connection Strength</h4>
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-primary rounded-full h-2 transition-all duration-300"
+                        style={{ width: `${selectedConnection.strength * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-sm font-medium">{Math.round(selectedConnection.strength * 100)}%</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Based on combined XP, levels, and connection age
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium mb-2">Created</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(selectedConnection.connection.createdAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+                
+                <div className="pt-4 border-t">
+                  <button
+                    onClick={() => {
+                      // Navigate to connected sparks or perform other actions
+                      setSelectedConnection(null)
+                    }}
+                    className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                  >
+                    Explore Connection
+                  </button>
+                </div>
               </div>
             </div>
           </div>
