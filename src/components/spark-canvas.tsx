@@ -54,14 +54,14 @@ export function SparkCanvas() {
   // Calculate connection lines between sparks
   const getConnectionLines = useCallback((): ConnectionLine[] => {
     const lines: ConnectionLine[] = []
-    
+
     state.sparks.forEach(spark => {
       if (spark.connections && spark.connections.length > 0) {
         spark.connections.forEach(connection => {
           const connectedSpark = state.sparks.find(s => s.id === connection.sparkId2)
           if (connectedSpark) {
             // Only create line once per connection (avoid duplicates)
-            if (!lines.some(line => 
+            if (!lines.some(line =>
               (line.fromSparkId === spark.id && line.toSparkId === connectedSpark.id) ||
               (line.fromSparkId === connectedSpark.id && line.toSparkId === spark.id)
             )) {
@@ -79,7 +79,7 @@ export function SparkCanvas() {
         })
       }
     })
-    
+
     return lines
   }, [state.sparks])
 
@@ -97,7 +97,7 @@ export function SparkCanvas() {
       // Calculate new position based on current position + drag delta
       const newPositionX = Math.max(0, (spark.positionX || 0) + delta.x)
       const newPositionY = Math.max(0, (spark.positionY || 0) + delta.y)
-      
+
       await actions.updateSpark(spark.id, {
         positionX: newPositionX,
         positionY: newPositionY,
@@ -133,7 +133,7 @@ export function SparkCanvas() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div 
+      <div
         className="relative w-full h-full bg-gradient-to-br from-background to-muted/20 overflow-hidden"
         onClick={handleCanvasClick}
       >
@@ -241,3 +241,5 @@ export function SparkCanvas() {
     </DndContext>
   )
 }
+
+
