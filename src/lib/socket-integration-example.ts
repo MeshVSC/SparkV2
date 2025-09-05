@@ -1,5 +1,5 @@
 // Example usage of the realtime collaboration system
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRealtimeCollaboration } from '@/hooks/use-realtime-collaboration';
 import { useSession } from 'next-auth/react';
 
@@ -84,14 +84,24 @@ export const ExampleSparkCollaborationComponent = () => {
     });
   };
 
-  return React.createElement('div', {},
-    React.createElement('div', { className: "mb-4" },
+  return React.createElement(
+    'div',
+    null,
+    React.createElement(
+      'div',
+      { className: "mb-4" },
       `Status: ${connectionStatus} | Connected Users: ${connectedUsers.length}`
     ),
-    React.createElement('div', { className: "border p-4 rounded" },
-      React.createElement('div', { className: "flex items-center justify-between mb-2" },
-        React.createElement('h3', {}, 'Example Spark'),
-        isSparkBeingEdited('spark-123') && React.createElement('div', { className: "text-sm text-yellow-600" },
+    React.createElement(
+      'div',
+      { className: "border p-4 rounded" },
+      React.createElement(
+        'div',
+        { className: "flex items-center justify-between mb-2" },
+        React.createElement('h3', null, 'Example Spark'),
+        isSparkBeingEdited('spark-123') && React.createElement(
+          'div',
+          { className: "text-sm text-yellow-600" },
           `Being edited by: ${getSparkEditors('spark-123').map(s => s.username).join(', ')}`
         )
       ),
@@ -103,14 +113,22 @@ export const ExampleSparkCollaborationComponent = () => {
         onChange: (e: any) => handleContentChange('spark-123', e.target.value, 'content')
       })
     ),
-    React.createElement('div', { className: "mt-4" },
-      React.createElement('h4', {}, 'Connected Users:'),
-      React.createElement('ul', {},
+    React.createElement(
+      'div',
+      { className: "mt-4" },
+      React.createElement('h4', null, 'Connected Users:'),
+      React.createElement(
+        'ul',
+        null,
         connectedUsers.map(user =>
-          React.createElement('li', { 
-            key: user.userId, 
-            className: `text-${user.status === 'online' ? 'green' : 'gray'}-600`
-          }, `${user.username} (${user.status})`)
+          React.createElement(
+            'li',
+            { 
+              key: user.userId, 
+              className: `text-${user.status === 'online' ? 'green' : 'gray'}-600` 
+            },
+            `${user.username} (${user.status})`
+          )
         )
       )
     )

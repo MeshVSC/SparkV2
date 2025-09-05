@@ -70,6 +70,31 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
     }
   }, [spark])
 
+  // Handle touch events for dismiss gestures
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      // Allow tap-outside-to-close on mobile
+      onOpenChange(false)
+    }
+  }
+
+  // Prevent zoom on double tap for iOS
+  useEffect(() => {
+    if (!open) return
+    
+    const viewport = document.querySelector('meta[name=viewport]')
+    if (viewport) {
+      const originalContent = viewport.getAttribute('content')
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no')
+      
+      return () => {
+        if (originalContent) {
+          viewport.setAttribute('content', originalContent)
+        }
+      }
+    }
+  }, [open])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -171,56 +196,65 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Spark Details</DialogTitle>
-            <DialogDescription>
+        <DialogContent 
+          className="sm:max-w-[800px] max-h-[85vh] overflow-y-auto touch:p-6 touch:gap-6"
+          onTouchStart={handleTouchStart}
+        >
+          <DialogHeader className="touch:mb-4">
+            <DialogTitle className="touch:text-lg">Edit Spark Details</DialogTitle>
+            <DialogDescription className="touch:text-base touch:leading-relaxed">
               Update your spark's information, content, and settings. Changes are saved automatically.
             </DialogDescription>
           </DialogHeader>
           
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title *</Label>
+          <form onSubmit={handleSubmit} className="space-y-4 touch:space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 touch:gap-6">
+              <div className="space-y-2 touch:space-y-3">
+                <Label htmlFor="title" className="touch:text-base">Title *</Label>
                 <Input
                   id="title"
+                  name="title"
                   placeholder="Enter spark title..."
                   value={formData.title}
                   onChange={(e) => handleInputChange("title", e.target.value)}
                   required
+                  autoComplete="off"
+                  inputMode="text"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
+              <div className="space-y-2 touch:space-y-3">
+                <Label htmlFor="status" className="touch:text-base">Status</Label>
                 <Select value={formData.status} onValueChange={(value) => handleInputChange("status", value)}>
-                  <SelectTrigger id="status">
+                  <SelectTrigger id="status" className="touch:min-h-[44px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={SparkStatus.SEEDLING}>Seedling</SelectItem>
-                    <SelectItem value={SparkStatus.SAPLING}>Sapling</SelectItem>
-                    <SelectItem value={SparkStatus.TREE}>Tree</SelectItem>
-                    <SelectItem value={SparkStatus.FOREST}>Forest</SelectItem>
+                    <SelectItem value={SparkStatus.SEEDLING}>🌱 Seedling</SelectItem>
+                    <SelectItem value={SparkStatus.SAPLING}>🌿 Sapling</SelectItem>
+                    <SelectItem value={SparkStatus.TREE}>🌳 Tree</SelectItem>
+                    <SelectItem value={SparkStatus.FOREST}>🌲 Forest</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+            <div className="space-y-2 touch:space-y-3">
+              <Label htmlFor="description" className="touch:text-base">Description</Label>
               <Input
                 id="description"
+                name="description"
                 placeholder="Describe your spark..."
                 value={formData.description}
                 onChange={(e) => handleInputChange("description", e.target.value)}
+                autoComplete="off"
+                inputMode="text"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="content">Content</Label>
-              <div className="border rounded-md overflow-hidden">
+            <div className="space-y-2 touch:space-y-3">
+              <Label htmlFor="content" className="touch:text-base">Content</Label>
+              <div className="border rounded-md overflow-hidden touch:min-h-[300px]">
                 <MDXEditor
                   ref={setEditorRef}
                   markdown={formData.content}
@@ -249,34 +283,37 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
                       ),
                     }),
                   ]}
-                  contentEditableClassName="prose max-w-full min-h-[200px] p-4 focus:outline-none"
+                  contentEditableClassName="prose max-w-full min-h-[200px] p-4 focus:outline-none touch:min-h-[250px] touch:text-[16px] touch:leading-relaxed"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Color</Label>
-              <div className="flex gap-2 flex-wrap">
+            <div className="space-y-2 touch:space-y-3">
+              <Label className="touch:text-base">Color</Label>
+              <div className="flex gap-3 flex-wrap touch:gap-4">
                 {colorOptions.map((color) => (
                   <button
                     key={color.value}
                     type="button"
-                    className={`w-10 h-10 rounded-full border-2 ${
-                      formData.color === color.value ? "border-primary" : "border-gray-300"
+                    className={`w-10 h-10 rounded-full border-2 transition-all touch:w-12 touch:h-12 touch:min-w-[44px] touch:min-h-[44px] ${
+                      formData.color === color.value 
+                        ? "border-primary ring-2 ring-primary/20 scale-110" 
+                        : "border-gray-300 hover:border-gray-400 active:scale-95"
                     }`}
                     style={{ backgroundColor: color.value }}
                     onClick={() => handleInputChange("color", color.value)}
                     title={color.name}
+                    aria-label={`Select ${color.name} color`}
                   />
                 ))}
               </div>
             </div>
 
             {/* Connections Section */}
-            <div className="space-y-2">
+            <div className="space-y-2 touch:space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-2">
-                  <Link2 className="w-4 h-4" />
+                <Label className="flex items-center gap-2 touch:text-base">
+                  <Link2 className="w-4 h-4 touch:w-5 touch:h-5" />
                   Connected Sparks
                 </Label>
                 <Button
@@ -285,6 +322,7 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
                   size="sm"
                   onClick={() => setShowConnectionDialog(true)}
                   disabled={availableSparks.length === 0}
+                  className="touch:min-h-[44px]"
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   Connect
@@ -292,24 +330,24 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
               </div>
               
               {connectedSparks.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 touch:gap-3">
                   {connectedSparks.map((connectedSpark) => (
-                    <Badge key={connectedSpark.id} variant="secondary" className="text-sm">
-                      <Link className="w-3 h-3 mr-1" />
+                    <Badge key={connectedSpark.id} variant="secondary" className="text-sm touch:text-base touch:py-2 touch:px-3">
+                      <Link className="w-3 h-3 mr-1 touch:w-4 touch:h-4" />
                       {connectedSpark.title}
                     </Badge>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No connections yet. Connect this spark to related ideas!</p>
+                <p className="text-sm text-muted-foreground touch:text-base">No connections yet. Connect this spark to related ideas!</p>
               )}
             </div>
 
             {/* Todos Section */}
-            <div className="space-y-2">
+            <div className="space-y-2 touch:space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-2">
-                  <Target className="w-4 h-4" />
+                <Label className="flex items-center gap-2 touch:text-base">
+                  <Target className="w-4 h-4 touch:w-5 touch:h-5" />
                   Todos
                 </Label>
                 <Button
@@ -317,6 +355,7 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
                   variant="outline"
                   size="sm"
                   onClick={() => setShowTodoDialog(true)}
+                  className="touch:min-h-[44px]"
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   Add Todo
@@ -324,16 +363,16 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
               </div>
               
               {spark.todos && spark.todos.length > 0 ? (
-                <div className="space-y-2 max-h-40 overflow-y-auto">
+                <div className="space-y-2 max-h-40 overflow-y-auto touch:max-h-60 touch:space-y-3">
                   {spark.todos.map((todo) => (
-                    <div key={todo.id} className="flex items-center gap-2 p-2 border rounded">
+                    <div key={todo.id} className="flex items-center gap-2 p-2 border rounded touch:p-4 touch:gap-4 touch:min-h-[44px]">
                       <input
                         type="checkbox"
                         checked={todo.completed}
                         onChange={(e) => actions.updateTodo(spark.id, todo.id, { completed: e.target.checked })}
-                        className="rounded"
+                        className="rounded touch:w-5 touch:h-5"
                       />
-                      <span className={`flex-1 text-sm ${todo.completed ? 'line-through text-muted-foreground' : ''}`}>
+                      <span className={`flex-1 text-sm touch:text-base ${todo.completed ? 'line-through text-muted-foreground' : ''}`}>
                         {todo.title}
                       </span>
                       <Button
@@ -341,30 +380,32 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
                         variant="ghost"
                         size="sm"
                         onClick={() => actions.deleteTodo(spark.id, todo.id)}
-                        className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                        className="h-6 w-6 p-0 text-destructive hover:text-destructive touch:h-10 touch:w-10 touch:min-h-[44px] touch:min-w-[44px]"
+                        aria-label="Delete todo"
                       >
-                        <X className="h-3 w-3" />
+                        <X className="h-3 w-3 touch:h-4 touch:w-4" />
                       </Button>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No todos yet. Add one to get started!</p>
+                <p className="text-sm text-muted-foreground touch:text-base">No todos yet. Add one to get started!</p>
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label>Tags</Label>
-              <div className="flex flex-wrap gap-2 mb-2">
+            <div className="space-y-2 touch:space-y-3">
+              <Label className="touch:text-base">Tags</Label>
+              <div className="flex flex-wrap gap-2 mb-2 touch:gap-3 touch:mb-4">
                 {formData.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-sm">
+                  <Badge key={tag} variant="secondary" className="text-sm touch:text-base touch:py-2 touch:px-3">
                     {tag}
                     <button
                       type="button"
                       onClick={() => removeTag(tag)}
-                      className="ml-1 hover:text-destructive"
+                      className="ml-1 hover:text-destructive touch:ml-2 touch:min-h-[20px] touch:min-w-[20px]"
+                      aria-label={`Remove ${tag} tag`}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3 w-3 touch:h-4 touch:w-4" />
                     </button>
                   </Badge>
                 ))}
@@ -372,11 +413,13 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
               <Input
                 placeholder="Add tags (press Enter)..."
                 onKeyPress={handleTagKeyPress}
+                autoComplete="off"
+                inputMode="text"
               />
             </div>
 
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="bg-muted/50 p-4 rounded-lg touch:p-6">
+              <div className="grid grid-cols-3 gap-4 text-sm touch:text-base touch:gap-6">
                 <div>
                   <div className="text-muted-foreground">Level</div>
                   <div className="font-medium">{spark.level}</div>
@@ -393,19 +436,28 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
             </div>
 
             {/* File Upload Section */}
-            <div className="space-y-2">
-              <Label>Attachments</Label>
+            <div className="space-y-2 touch:space-y-3">
+              <Label className="touch:text-base">Attachments</Label>
               <FileUploader 
                 sparkId={spark.id} 
                 attachments={spark.attachments || []} 
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <div className="flex flex-col-reverse gap-3 pt-4 sm:flex-row sm:justify-end touch:pt-6 touch:gap-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+                className="touch:w-full sm:touch:w-auto"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={!formData.title.trim()}>
+              <Button 
+                type="submit" 
+                disabled={!formData.title.trim()}
+                className="touch:w-full sm:touch:w-auto"
+              >
                 Save Changes
               </Button>
             </div>
@@ -415,19 +467,19 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
 
       {/* Connection Dialog */}
       <Dialog open={showConnectionDialog} onOpenChange={setShowConnectionDialog}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Connect to Another Spark</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="sm:max-w-[400px] touch:p-6">
+          <DialogHeader className="touch:mb-4">
+            <DialogTitle className="touch:text-lg">Connect to Another Spark</DialogTitle>
+            <DialogDescription className="touch:text-base touch:leading-relaxed">
               Create a connection between related sparks to build a network of ideas and track their relationships.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Select a spark to connect with</Label>
+          <div className="space-y-4 touch:space-y-6">
+            <div className="space-y-2 touch:space-y-3">
+              <Label className="touch:text-base">Select a spark to connect with</Label>
               <Select value={selectedSparkToConnect} onValueChange={setSelectedSparkToConnect}>
-                <SelectTrigger>
+                <SelectTrigger className="touch:min-h-[44px]">
                   <SelectValue placeholder="Choose a spark..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -440,13 +492,18 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
               </Select>
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowConnectionDialog(false)}>
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end touch:gap-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowConnectionDialog(false)}
+                className="touch:w-full sm:touch:w-auto"
+              >
                 Cancel
               </Button>
               <Button 
                 onClick={handleConnectSpark}
                 disabled={!selectedSparkToConnect}
+                className="touch:w-full sm:touch:w-auto"
               >
                 Connect
               </Button>

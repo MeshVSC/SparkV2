@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useSpark } from "@/contexts/spark-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,6 +25,29 @@ export function CreateSparkDialog({ open, onOpenChange, initialStatus }: CreateS
     color: "#10b981",
     tags: "",
   })
+
+  // Handle touch events for dismiss gestures
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      // Allow tap-outside-to-close on mobile
+      onOpenChange(false)
+    }
+  }
+
+  // Prevent zoom on double tap for iOS
+  useEffect(() => {
+    const viewport = document.querySelector('meta[name=viewport]')
+    if (viewport) {
+      const originalContent = viewport.getAttribute('content')
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no')
+      
+      return () => {
+        if (originalContent) {
+          viewport.setAttribute('content', originalContent)
+        }
+      }
+    }
+  }, [open])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -89,85 +112,108 @@ export function CreateSparkDialog({ open, onOpenChange, initialStatus }: CreateS
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Create New Spark</DialogTitle>
-          <DialogDescription>
+      <DialogContent 
+        className="sm:max-w-[425px] touch:p-6 touch:gap-6"
+        onTouchStart={handleTouchStart}
+      >
+        <DialogHeader className="touch:mb-4">
+          <DialogTitle className="touch:text-lg">Create New Spark</DialogTitle>
+          <DialogDescription className="touch:text-base touch:leading-relaxed">
             Create a new spark to capture your ideas and start growing them into reality.
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
+        <form onSubmit={handleSubmit} className="space-y-4 touch:space-y-6">
+          <div className="space-y-2 touch:space-y-3">
+            <Label htmlFor="title" className="touch:text-base">Title *</Label>
             <Input
               id="title"
+              name="title"
               placeholder="Enter spark title..."
               value={formData.title}
               onChange={(e) => handleInputChange("title", e.target.value)}
               required
+              autoComplete="off"
+              inputMode="text"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+          <div className="space-y-2 touch:space-y-3">
+            <Label htmlFor="description" className="touch:text-base">Description</Label>
             <Textarea
               id="description"
+              name="description"
               placeholder="Describe your spark..."
               value={formData.description}
               onChange={(e) => handleInputChange("description", e.target.value)}
               rows={3}
+              inputMode="text"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
+          <div className="space-y-2 touch:space-y-3">
+            <Label htmlFor="status" className="touch:text-base">Status</Label>
             <Select value={formData.status} onValueChange={(value) => handleInputChange("status", value)}>
-              <SelectTrigger id="status">
+              <SelectTrigger id="status" className="touch:min-h-[44px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={SparkStatus.SEEDLING}>Seedling</SelectItem>
-                <SelectItem value={SparkStatus.SAPLING}>Sapling</SelectItem>
-                <SelectItem value={SparkStatus.TREE}>Tree</SelectItem>
-                <SelectItem value={SparkStatus.FOREST}>Forest</SelectItem>
+                <SelectItem value={SparkStatus.SEEDLING}>🌱 Seedling</SelectItem>
+                <SelectItem value={SparkStatus.SAPLING}>🌿 Sapling</SelectItem>
+                <SelectItem value={SparkStatus.TREE}>🌳 Tree</SelectItem>
+                <SelectItem value={SparkStatus.FOREST}>🌲 Forest</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="color">Color</Label>
-            <div className="flex gap-2 flex-wrap">
+          <div className="space-y-2 touch:space-y-3">
+            <Label className="touch:text-base">Color</Label>
+            <div className="flex gap-3 flex-wrap touch:gap-4">
               {colorOptions.map((color) => (
                 <button
                   key={color.value}
                   type="button"
-                  className={`w-8 h-8 rounded-full border-2 ${
-                    formData.color === color.value ? "border-primary" : "border-gray-300"
+                  className={`w-10 h-10 rounded-full border-2 transition-all touch:w-12 touch:h-12 touch:min-w-[44px] touch:min-h-[44px] ${
+                    formData.color === color.value 
+                      ? "border-primary ring-2 ring-primary/20 scale-110" 
+                      : "border-gray-300 hover:border-gray-400 active:scale-95"
                   }`}
                   style={{ backgroundColor: color.value }}
                   onClick={() => handleInputChange("color", color.value)}
                   title={color.name}
+                  aria-label={`Select ${color.name} color`}
                 />
               ))}
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="tags">Tags</Label>
+          <div className="space-y-2 touch:space-y-3">
+            <Label htmlFor="tags" className="touch:text-base">Tags</Label>
             <Input
               id="tags"
+              name="tags"
               placeholder="Enter tags separated by commas..."
               value={formData.tags}
               onChange={(e) => handleInputChange("tags", e.target.value)}
+              autoComplete="off"
+              inputMode="text"
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex flex-col-reverse gap-3 pt-4 sm:flex-row sm:justify-end touch:pt-6 touch:gap-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              className="touch:w-full sm:touch:w-auto"
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={!formData.title.trim()}>
+            <Button 
+              type="submit" 
+              disabled={!formData.title.trim()}
+              className="touch:w-full sm:touch:w-auto"
+            >
               Create Spark
             </Button>
           </div>

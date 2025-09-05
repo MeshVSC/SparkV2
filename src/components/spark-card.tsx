@@ -79,19 +79,19 @@ export function SparkCard({ spark, isSelected, onClick, isDragging = false }: Sp
     <>
       <Card
         className={`
-          w-64 shadow-lg transition-all duration-200 cursor-pointer
-          ${isSelected ? 'ring-2 ring-primary shadow-xl' : 'hover:shadow-xl'}
+          w-64 shadow-lg transition-all duration-200 cursor-pointer touch-manipulation
+          ${isSelected ? 'ring-2 ring-primary shadow-xl' : 'hover:shadow-xl active:shadow-2xl active:scale-[1.02]'}
           ${isDragging ? 'opacity-50 shadow-2xl scale-105' : ''}
-          border-l-4
+          border-l-4 touch:w-full touch:max-w-none touch:shadow-md
         `}
         style={{ borderLeftColor: spark.color }}
         onClick={onClick}
       >
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-2 touch:pb-3 touch:p-4">
           <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className="text-lg">{getStatusIcon(spark.status)}</span>
-              <h3 className="font-medium text-sm line-clamp-1 flex-1">
+            <div className="flex items-center gap-2 flex-1 min-w-0 touch:gap-3">
+              <span className="text-lg touch:text-xl">{getStatusIcon(spark.status)}</span>
+              <h3 className="font-medium text-sm line-clamp-1 flex-1 touch:text-base touch:font-semibold">
                 {spark.title}
               </h3>
             </div>
@@ -100,88 +100,99 @@ export function SparkCard({ spark, isSelected, onClick, isDragging = false }: Sp
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-6 w-6 p-0"
+                  className="h-6 w-6 p-0 touch:h-10 touch:w-10 touch:min-h-[44px] touch:min-w-[44px]"
                   onClick={(e) => e.stopPropagation()}
+                  aria-label="Spark options menu"
                 >
-                  <MoreVertical className="h-3 w-3" />
+                  <MoreVertical className="h-3 w-3 touch:h-4 touch:w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setShowDetailDialog(true)}>
-                  <Edit className="h-3 w-3 mr-2" />
+              <DropdownMenuContent align="end" className="touch:min-w-[200px]">
+                <DropdownMenuItem 
+                  onClick={() => setShowDetailDialog(true)}
+                  className="touch:py-3 touch:px-4 touch:text-base"
+                >
+                  <Edit className="h-3 w-3 mr-2 touch:h-4 touch:w-4 touch:mr-3" />
                   Edit Details
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowTodos(!showTodos)}>
-                  <Target className="h-3 w-3 mr-2" />
+                <DropdownMenuItem 
+                  onClick={() => setShowTodos(!showTodos)}
+                  className="touch:py-3 touch:px-4 touch:text-base"
+                >
+                  <Target className="h-3 w-3 mr-2 touch:h-4 touch:w-4 touch:mr-3" />
                   {showTodos ? 'Hide' : 'Show'} Todos
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                  <Trash2 className="h-3 w-3 mr-2" />
+                <DropdownMenuItem 
+                  onClick={handleDelete} 
+                  className="text-destructive touch:py-3 touch:px-4 touch:text-base"
+                >
+                  <Trash2 className="h-3 w-3 mr-2 touch:h-4 touch:w-4 touch:mr-3" />
                   Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 touch:gap-3 touch:mt-2">
             <Badge 
               variant="secondary" 
-              className={`text-xs ${getStatusColor(spark.status)}`}
+              className={`text-xs touch:text-sm touch:py-1 touch:px-2 ${getStatusColor(spark.status)}`}
             >
               {spark.status.toLowerCase()}
             </Badge>
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-xs touch:text-sm touch:py-1 touch:px-2">
               Lvl {spark.level}
             </Badge>
           </div>
         </CardHeader>
 
-        <CardContent className="pt-0 space-y-3">
+        <CardContent className="pt-0 space-y-3 touch:space-y-4 touch:px-4 touch:pb-4">
           {spark.description && (
-            <p className="text-xs text-muted-foreground line-clamp-2">
+            <p className="text-xs text-muted-foreground line-clamp-2 touch:text-sm touch:leading-relaxed">
               {spark.description}
             </p>
           )}
 
           {/* XP Progress */}
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs">
+          <div className="space-y-1 touch:space-y-2">
+            <div className="flex justify-between text-xs touch:text-sm">
               <span className="text-muted-foreground">Level Progress</span>
               <span>{spark.xp % 100}/100 XP</span>
             </div>
-            <Progress value={getLevelProgress()} className="h-1" />
+            <Progress value={getLevelProgress()} className="h-1 touch:h-2" />
           </div>
 
           {/* Todo Progress */}
           {totalTodos > 0 && (
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs">
+            <div className="space-y-1 touch:space-y-2">
+              <div className="flex justify-between text-xs touch:text-sm">
                 <span className="text-muted-foreground">Todos</span>
                 <span>{completedTodos}/{totalTodos}</span>
               </div>
-              <Progress value={progressPercentage} className="h-1" />
+              <Progress value={progressPercentage} className="h-1 touch:h-2" />
             </div>
           )}
 
           {/* Quick Todos */}
           {showTodos && spark.todos && spark.todos.length > 0 && (
-            <div className="space-y-1 max-h-32 overflow-y-auto">
+            <div className="space-y-1 max-h-32 overflow-y-auto touch:space-y-2 touch:max-h-40">
               {spark.todos.slice(0, 3).map((todo) => (
                 <div 
                   key={todo.id}
-                  className="flex items-center gap-2 text-xs"
+                  className="flex items-center gap-2 text-xs touch:gap-3 touch:text-sm touch:py-2"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-4 w-4 p-0"
+                    className="h-4 w-4 p-0 touch:h-8 touch:w-8 touch:min-h-[32px] touch:min-w-[32px]"
                     onClick={() => handleQuickTodoComplete(todo.id, !todo.completed)}
+                    aria-label={todo.completed ? "Mark todo as incomplete" : "Mark todo as complete"}
                   >
                     {todo.completed ? (
-                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-green-600 touch:h-4 touch:w-4" />
                     ) : (
-                      <Circle className="h-3 w-3 text-gray-400" />
+                      <Circle className="h-3 w-3 text-gray-400 touch:h-4 touch:w-4" />
                     )}
                   </Button>
                   <span className={`line-clamp-1 ${todo.completed ? 'line-through text-muted-foreground' : ''}`}>
@@ -190,7 +201,7 @@ export function SparkCard({ spark, isSelected, onClick, isDragging = false }: Sp
                 </div>
               ))}
               {spark.todos.length > 3 && (
-                <div className="text-xs text-muted-foreground pl-6">
+                <div className="text-xs text-muted-foreground pl-6 touch:text-sm touch:pl-8">
                   +{spark.todos.length - 3} more...
                 </div>
               )}
@@ -199,14 +210,14 @@ export function SparkCard({ spark, isSelected, onClick, isDragging = false }: Sp
 
           {/* Tags */}
           {spark.tags && (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1 touch:gap-2">
               {JSON.parse(spark.tags).slice(0, 2).map((tag: string, index: number) => (
-                <Badge key={index} variant="outline" className="text-xs">
+                <Badge key={index} variant="outline" className="text-xs touch:text-sm touch:py-1 touch:px-2">
                   {tag}
                 </Badge>
               ))}
               {JSON.parse(spark.tags).length > 2 && (
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-xs touch:text-sm touch:py-1 touch:px-2">
                   +{JSON.parse(spark.tags).length - 2}
                 </Badge>
               )}
