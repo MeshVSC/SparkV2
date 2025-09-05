@@ -1,6 +1,7 @@
 "use client"
 
 import { useSpark } from "@/contexts/spark-context"
+import { useSearch } from "@/contexts/search-context"
 import { SparkCard } from "@/components/spark-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -18,20 +19,14 @@ import {
 
 export function TimelineView() {
   const { state, actions } = useSpark()
+  const { filteredSparks } = useSearch()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
 
-  const filteredSparks = state.sparks.filter(spark => {
-    if (!state.searchQuery) return true
-    const query = state.searchQuery.toLowerCase()
-    return (
-      spark.title.toLowerCase().includes(query) ||
-      spark.description?.toLowerCase().includes(query) ||
-      (spark.tags && spark.tags.toLowerCase().includes(query))
-    )
-  })
+  // Use filtered sparks from search context, fallback to all sparks if no filtering
+  const sparksToDisplay = filteredSparks.length > 0 ? filteredSparks : state.sparks
 
   // Sort sparks by creation date
-  const sortedSparks = [...filteredSparks].sort((a, b) => 
+  const sortedSparks = [...sparksToDisplay].sort((a, b) => 
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   )
 
@@ -55,9 +50,9 @@ export function TimelineView() {
     }
   }
 
-  const totalXP = filteredSparks.reduce((sum, spark) => sum + spark.xp, 0)
-  const totalTodos = filteredSparks.reduce((sum, spark) => sum + (spark.todos?.length || 0), 0)
-  const completedTodos = filteredSparks.reduce((sum, spark) => 
+  const totalXP = sparksToDisplay.reduce((sum, spark) => sum + spark.xp, 0)
+  const totalTodos = sparksToDisplay.reduce((sum, spark) => sum + (spark.todos?.length || 0), 0)
+  const completedTodos = sparksToDisplay.reduce((sum, spark) => 
     sum + (spark.todos?.filter(todo => todo.completed).length || 0), 0
   )
 
@@ -108,7 +103,7 @@ export function TimelineView() {
               <Calendar className="h-4 w-4 text-purple-600" />
               <div>
                 <p className="text-sm text-muted-foreground">Total Sparks</p>
-                <p className="text-lg font-semibold">{filteredSparks.length}</p>
+                <p className="text-lg font-semibold">{sparksToDisplay.length}</p>
               </div>
             </div>
           </CardContent>
@@ -178,7 +173,7 @@ export function TimelineView() {
           ))}
       </div>
 
-      {filteredSparks.length === 0 && (
+      {sparksToDisplay.length === 0 && (
         <div className="text-center py-16">
           <Calendar className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-lg font-medium mb-2">No sparks yet</h3>

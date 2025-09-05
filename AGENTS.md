@@ -5,34 +5,34 @@
 ### Setup
 ```bash
 npm install
+npm run db:push
 ```
 
 ### Development
-```bash
-npm run dev          # Start dev server with nodemon on port 3000
-npm run build        # Build for production
-npm run start        # Start production server
-npm run lint         # Run ESLint
-```
+- **Build**: `npm run build`
+- **Lint**: `npm run lint` 
+- **Tests**: No test framework configured
+- **Dev server**: `npm run dev` (Next.js + custom server on port 3000)
 
 ### Database
-```bash
-npm run db:push      # Push schema to database
-npm run db:generate  # Generate Prisma client
-npm run db:migrate   # Run migrations
-```
+- **Push schema**: `npm run db:push`
+- **Generate client**: `npm run db:generate`
+- **Migrate**: `npm run db:migrate`
 
 ## Tech Stack
-- **Next.js 15** with App Router and TypeScript 5
-- **Tailwind CSS 4** + shadcn/ui components
-- **Prisma** ORM with database integration
-- **NextAuth.js** for authentication
-- **Zustand** for state management
-- **TanStack Query** for data fetching
+- Next.js 15 + TypeScript, Tailwind CSS 4, shadcn/ui
+- Database: Prisma + SQLite
+- Auth: NextAuth.js
+- State: Zustand, TanStack Query
+- UI: Framer Motion, Radix UI, DND Kit, Recharts
+
+## Architecture
+- App Router structure (`src/app/`)
+- Custom Express server (`server.ts`)
+- Component library (`src/components/ui/`)
+- Database models for Spark-based productivity app
 
 ## Code Style
-- TypeScript with relaxed ESLint rules (no-unused-vars, prefer-const off)
-- Path aliases: `@/*` → `src/*`
-- Components in `src/components/` with UI components in `ui/` subfolder
-- Custom hooks in `src/hooks/`
-- Utilities in `src/lib/`
+- ESLint configured with relaxed TypeScript/React rules
+- No comments unless complex
+- Follow existing shadcn/ui patterns

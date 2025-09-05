@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AchievementProvider } from "@/components/achievement-provider";
 import { AuthProvider } from "@/components/auth-provider";
 import { GuestProvider } from "@/contexts/guest-context";
+import { SearchProvider } from "@/contexts/search-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,10 +48,12 @@ export default function RootLayout({
       >
         <GuestProvider>
           <AuthProvider>
-            <AchievementProvider>
-              {children}
-              <Toaster />
-            </AchievementProvider>
+            <SearchProvider>
+              <AchievementProvider>
+                {children}
+                <Toaster />
+              </AchievementProvider>
+            </SearchProvider>
           </AuthProvider>
         </GuestProvider>
       </body>

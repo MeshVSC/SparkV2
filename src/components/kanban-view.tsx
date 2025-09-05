@@ -1,6 +1,7 @@
 "use client"
 
 import { useSpark } from "@/contexts/spark-context"
+import { useSearch } from "@/contexts/search-context"
 import { SparkCard } from "@/components/spark-card"
 import { SparkStatus } from "@/types/spark"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -86,6 +87,7 @@ function DroppableColumn({
 
 export function KanbanView() {
   const { state, actions } = useSpark()
+  const { filteredSparks } = useSearch()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [activeSpark, setActiveSpark] = useState<Spark | null>(null)
 
@@ -122,15 +124,8 @@ export function KanbanView() {
     setActiveSpark(null)
   }, [state.sparks, actions])
 
-  const filteredSparks = state.sparks.filter(spark => {
-    if (!state.searchQuery) return true
-    const query = state.searchQuery.toLowerCase()
-    return (
-      spark.title.toLowerCase().includes(query) ||
-      spark.description?.toLowerCase().includes(query) ||
-      (spark.tags && spark.tags.toLowerCase().includes(query))
-    )
-  })
+  // Use filtered sparks from search context, fallback to all sparks if no filtering
+  const sparksToDisplay = filteredSparks.length > 0 ? filteredSparks : state.sparks
 
   const columns = [
     {
@@ -138,28 +133,28 @@ export function KanbanView() {
       title: "Seedling",
       icon: Leaf,
       color: "bg-green-100 text-green-800 border-green-200",
-      sparks: filteredSparks.filter(spark => spark.status === SparkStatus.SEEDLING)
+      sparks: sparksToDisplay.filter(spark => spark.status === SparkStatus.SEEDLING)
     },
     {
       id: SparkStatus.SAPLING,
       title: "Sapling",
       icon: TreePine,
       color: "bg-blue-100 text-blue-800 border-blue-200",
-      sparks: filteredSparks.filter(spark => spark.status === SparkStatus.SAPLING)
+      sparks: sparksToDisplay.filter(spark => spark.status === SparkStatus.SAPLING)
     },
     {
       id: SparkStatus.TREE,
       title: "Tree",
       icon: TreePine,
       color: "bg-purple-100 text-purple-800 border-purple-200",
-      sparks: filteredSparks.filter(spark => spark.status === SparkStatus.TREE)
+      sparks: sparksToDisplay.filter(spark => spark.status === SparkStatus.TREE)
     },
     {
       id: SparkStatus.FOREST,
       title: "Forest",
       icon: Trees,
       color: "bg-orange-100 text-orange-800 border-orange-200",
-      sparks: filteredSparks.filter(spark => spark.status === SparkStatus.FOREST)
+      sparks: sparksToDisplay.filter(spark => spark.status === SparkStatus.FOREST)
     }
   ]
 

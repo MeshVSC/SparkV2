@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react"
 import { useSpark } from "@/contexts/spark-context"
+import { useSearch } from "@/contexts/search-context"
 import { SparkCard } from "@/components/spark-card"
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, PointerSensor, useSensor, useSensors, useDraggable } from "@dnd-kit/core"
 import { Spark } from "@/types/spark"
@@ -41,6 +42,7 @@ function DraggableSparkCard({ spark, isSelected, onClick }: { spark: Spark; isSe
 
 export function SparkCanvas() {
   const { state, actions } = useSpark()
+  const { filteredSparks } = useSearch()
   const [activeSpark, setActiveSpark] = useState<Spark | null>(null)
 
   const sensors = useSensors(
@@ -114,15 +116,8 @@ export function SparkCanvas() {
     }
   }, [actions])
 
-  const filteredSparks = state.sparks.filter(spark => {
-    if (!state.searchQuery) return true
-    const query = state.searchQuery.toLowerCase()
-    return (
-      spark.title.toLowerCase().includes(query) ||
-      spark.description?.toLowerCase().includes(query) ||
-      (spark.tags && spark.tags.toLowerCase().includes(query))
-    )
-  })
+  // Use filtered sparks from search context, fallback to all sparks if no filtering
+  const sparksToDisplay = filteredSparks.length > 0 ? filteredSparks : state.sparks
 
   const connectionLines = getConnectionLines()
 
@@ -189,7 +184,7 @@ export function SparkCanvas() {
         </svg>
 
         {/* Sparks */}
-        {filteredSparks.map((spark) => (
+        {sparksToDisplay.map((spark) => (
           <div
             key={spark.id}
             className="absolute transition-all duration-200 hover:scale-105"
@@ -209,7 +204,7 @@ export function SparkCanvas() {
         ))}
 
         {/* Empty state */}
-        {filteredSparks.length === 0 && (
+        {sparksToDisplay.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center space-y-4">
               <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">

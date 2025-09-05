@@ -4,8 +4,8 @@ import { useState } from "react"
 import { useSession } from "next-auth/react"
 import { useSpark } from "@/contexts/spark-context"
 import { useGuest } from "@/contexts/guest-context"
+import { useSearch } from "@/contexts/search-context"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -13,7 +13,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { 
   Plus, 
-  Search, 
   Lightbulb, 
   Kanban, 
   Clock, 
@@ -26,34 +25,26 @@ import {
 import { CreateSparkDialog } from "@/components/create-spark-dialog"
 import { AchievementCenter } from "@/components/achievement-center"
 import { UserAvatar } from "@/components/user-avatar"
+import { AdvancedSearch } from "@/components/enhanced-search"
 import Link from "next/link"
 
 export function Sidebar() {
   const { data: session } = useSession()
   const { state, actions } = useSpark()
   const { isGuest, guestData } = useGuest()
+  const { setFilteredSparks } = useSearch()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isAchievementCenterOpen, setIsAchievementCenterOpen] = useState(false)
-  const [searchInput, setSearchInput] = useState("")
 
   const handleCreateSpark = () => {
     setIsCreateDialogOpen(true)
   }
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    actions.setSearchQuery(searchInput)
+  const handleFiltersChange = (filteredSparks: any[]) => {
+    setFilteredSparks(filteredSparks)
   }
 
-  const filteredSparks = state.sparks.filter(spark => {
-    if (!state.searchQuery) return true
-    const query = state.searchQuery.toLowerCase()
-    return (
-      spark.title.toLowerCase().includes(query) ||
-      spark.description?.toLowerCase().includes(query) ||
-      (spark.tags && spark.tags.toLowerCase().includes(query))
-    )
-  })
+  const displaySparks = state.sparks
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -86,15 +77,9 @@ export function Sidebar() {
           </Alert>
         )}
         
-        <form onSubmit={handleSearch} className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search sparks..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="pl-10"
-          />
-        </form>
+        <div className="mb-4">
+          <AdvancedSearch onFiltersChange={handleFiltersChange} />
+        </div>
 
         <Button 
           onClick={handleCreateSpark}
@@ -124,7 +109,7 @@ export function Sidebar() {
 
         <TabsContent value="sparks" className="flex-1 overflow-hidden p-2">
           <div className="space-y-2 max-h-full overflow-y-auto">
-            {filteredSparks.map((spark) => (
+            {displaySparks.map((spark) => (
               <Card 
                 key={spark.id} 
                 className="cursor-pointer hover:bg-accent/50 transition-colors"
@@ -213,18 +198,18 @@ export function Sidebar() {
               <CardContent className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Total Sparks</span>
-                  <span className="font-medium">{state.sparks.length}</span>
+                  <span className="font-medium">{displaySparks.length}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Total XP</span>
                   <span className="font-medium">
-                    {state.sparks.reduce((sum, spark) => sum + spark.xp, 0)}
+                    {displaySparks.reduce((sum, spark) => sum + spark.xp, 0)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Completed Todos</span>
                   <span className="font-medium">
-                    {state.sparks.reduce((sum, spark) => 
+                    {displaySparks.reduce((sum, spark) => 
                       sum + (spark.todos?.filter(todo => todo.completed).length || 0), 0
                     )}
                   </span>
