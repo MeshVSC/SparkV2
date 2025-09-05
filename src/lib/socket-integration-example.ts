@@ -84,45 +84,36 @@ export const ExampleSparkCollaborationComponent = () => {
     });
   };
 
-  return (
-    <div>
-      {/* Connection Status */}
-      <div className="mb-4">
-        Status: {connectionStatus} | Connected Users: {connectedUsers.length}
-      </div>
-
-      {/* Example Spark Card */}
-      <div className="border p-4 rounded">
-        <div className="flex items-center justify-between mb-2">
-          <h3>Example Spark</h3>
-          {isSparkBeingEdited('spark-123') && (
-            <div className="text-sm text-yellow-600">
-              Being edited by: {getSparkEditors('spark-123').map(s => s.username).join(', ')}
-            </div>
-          )}
-        </div>
-        
-        <textarea
-          className="w-full p-2 border rounded"
-          placeholder="Spark content..."
-          onFocus={() => handleStartEditing('spark-123')}
-          onBlur={() => handleEndEditing('spark-123')}
-          onChange={(e) => handleContentChange('spark-123', e.target.value, 'content')}
-        />
-      </div>
-
-      {/* Connected Users List */}
-      <div className="mt-4">
-        <h4>Connected Users:</h4>
-        <ul>
-          {connectedUsers.map(user => (
-            <li key={user.userId} className={`text-${user.status === 'online' ? 'green' : 'gray'}-600`}>
-              {user.username} ({user.status})
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
+  return React.createElement('div', {},
+    React.createElement('div', { className: "mb-4" },
+      `Status: ${connectionStatus} | Connected Users: ${connectedUsers.length}`
+    ),
+    React.createElement('div', { className: "border p-4 rounded" },
+      React.createElement('div', { className: "flex items-center justify-between mb-2" },
+        React.createElement('h3', {}, 'Example Spark'),
+        isSparkBeingEdited('spark-123') && React.createElement('div', { className: "text-sm text-yellow-600" },
+          `Being edited by: ${getSparkEditors('spark-123').map(s => s.username).join(', ')}`
+        )
+      ),
+      React.createElement('textarea', {
+        className: "w-full p-2 border rounded",
+        placeholder: "Spark content...",
+        onFocus: () => handleStartEditing('spark-123'),
+        onBlur: () => handleEndEditing('spark-123'),
+        onChange: (e: any) => handleContentChange('spark-123', e.target.value, 'content')
+      })
+    ),
+    React.createElement('div', { className: "mt-4" },
+      React.createElement('h4', {}, 'Connected Users:'),
+      React.createElement('ul', {},
+        connectedUsers.map(user =>
+          React.createElement('li', { 
+            key: user.userId, 
+            className: `text-${user.status === 'online' ? 'green' : 'gray'}-600`
+          }, `${user.username} (${user.status})`)
+        )
+      )
+    )
   );
 };
 

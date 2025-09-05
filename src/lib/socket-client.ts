@@ -28,6 +28,16 @@ export interface SocketEvents {
     timestamp: string;
   }) => void;
 
+  // Notification events
+  notification_received: (data: {
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    data?: Record<string, any>;
+    timestamp: string;
+  }) => void;
+
   // Legacy events
   message: (data: { text: string; senderId: string; timestamp: string }) => void;
 }
@@ -253,6 +263,7 @@ export class SocketClient {
     this.socket.on('spark_editing_started', (data) => this.eventListeners.spark_editing_started?.(data));
     this.socket.on('spark_editing_ended', (data) => this.eventListeners.spark_editing_ended?.(data));
     this.socket.on('spark_content_changed', (data) => this.eventListeners.spark_content_changed?.(data));
+    this.socket.on('notification_received', (data) => this.eventListeners.notification_received?.(data));
     this.socket.on('message', (data) => this.eventListeners.message?.(data));
   }
 

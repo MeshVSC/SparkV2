@@ -188,6 +188,17 @@ export const setupSocket = (io: Server) => {
       }
     });
 
+    // Notification handler
+    socket.on('notification', (data: any) => {
+      // Broadcast notification to the specific user
+      if (currentRoom && userPresence) {
+        socket.to(currentRoom).emit('notification_received', {
+          ...data,
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
     // Legacy message handler for backwards compatibility
     socket.on('message', (msg: { text: string; senderId: string }) => {
       socket.emit('message', {

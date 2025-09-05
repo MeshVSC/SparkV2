@@ -1,5 +1,6 @@
 // server.ts - Next.js Standalone + Socket.IO
 import { setupSocket } from '@/lib/socket';
+import { socketNotificationIntegration } from '@/lib/notification/SocketNotificationIntegration';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import next from 'next';
@@ -41,6 +42,9 @@ async function createCustomServer() {
     });
 
     setupSocket(io);
+    
+    // Initialize notification integration with Socket.IO
+    socketNotificationIntegration.initialize(io);
 
     // Start the server
     server.listen(currentPort, hostname, () => {
