@@ -2,15 +2,19 @@
 "use client"
 
 import { useState, useMemo, useCallback, useEffect } from "react"
-import { Search, Filter, X, Tag, Calendar, Sparkles } from "lucide-react"
+import { Search, Filter, X, Tag, Calendar, Sparkles, Settings } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Slider } from "@/components/ui/slider"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import { Spark, SparkStatus } from "@/types/spark"
 import { useSpark } from "@/contexts/spark-context"
+import { searchService, SearchOptions } from "@/lib/search-service"
 
 interface SearchFilters {
   query: string
@@ -19,6 +23,12 @@ interface SearchFilters {
   dateFrom?: Date
   dateTo?: Date
   xpRange: [number, number]
+}
+
+interface SearchConfig {
+  threshold: number
+  includeMatches: boolean
+  fuzzySearch: boolean
 }
 
 interface AdvancedSearchProps {
@@ -34,6 +44,31 @@ export function AdvancedSearch({ onFiltersChange }: AdvancedSearchProps) {
     xpRange: [0, 1000]
   })
   const [showFilters, setShowFilters] = useState(false)
+  const [showSearchConfig, setShowSearchConfig] = useState(false)
+  const [searchConfig, setSearchConfig] = useState<SearchConfig>({
+    threshold: 0.6,
+    includeMatches: true,
+    fuzzySearch: true
+  })
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+
+  // Initialize search service with sparks data
+  useEffect(() => {
+    if (state.sparks.length > 0) {
+      searchService.indexSparks(state.sparks)
+    }
+  }, [state.sparks])
+
+  // Update search service options when config changes
+  useEffect(() => {
+    const options: Partial<SearchOptions> = {
+      threshold: searchConfig.fuzzySearch ? searchConfig.threshold : 0.0,
+      includeMatches: searchConfig.includeMatches,
+      includeScore: true
+    }
+    searchService.updateOptions(options)
+  }, [searchConfig])
 
   // Extract unique tags from all sparks
   const availableTags = useMemo(() => {
@@ -52,59 +87,43 @@ export function AdvancedSearch({ onFiltersChange }: AdvancedSearchProps) {
     return Array.from(tagSet).filter(Boolean)
   }, [state.sparks])
 
-  // Advanced search algorithm
+  // Advanced search using SearchService
   const filteredSparks = useMemo(() => {
-    let results = state.sparks
+    if (state.sparks.length === 0) return []
 
-    // Text search across multiple fields
-    if (filters.query.trim()) {
-      const query = filters.query.toLowerCase()
-      results = results.filter(spark => {
-        const searchFields = [
-          spark.title,
-          spark.description || "",
-          spark.content || "",
-          ...(spark.todos?.map(todo => todo.title) || [])
-        ].join(" ").toLowerCase()
+    // Use the SearchService for advanced fuzzy search
+    const searchResults = searchService.advancedSearch(filters.query, {
+      tags: filters.tags.length > 0 ? filters.tags : undefined,
+      status: filters.status !== "all" ? filters.status : undefined,
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+      xpRange: filters.xpRange[0] > 0 || filters.xpRange[1] < 1000 ? filters.xpRange : undefined
+    })
 
-        return searchFields.includes(query)
-      })
+    // Extract sparks from search results and sort by relevance score
+    return searchResults
+      .sort((a, b) => (a.score || 0) - (b.score || 0)) // Lower score = better match in Fuse.js
+      .map(result => result.item)
+  }, [state.sparks, filters, searchConfig])
+
+  // Handle search suggestions
+  const handleQueryChange = useCallback((value: string) => {
+    updateFilters({ query: value })
+    
+    if (value.length >= 2) {
+      const newSuggestions = searchService.getSuggestions(value, 5)
+      setSuggestions(newSuggestions)
+      setShowSuggestions(newSuggestions.length > 0)
+    } else {
+      setSuggestions([])
+      setShowSuggestions(false)
     }
+  }, [])
 
-    // Tag filtering
-    if (filters.tags.length > 0) {
-      results = results.filter(spark => {
-        if (!spark.tags) return false
-        try {
-          const sparkTags = JSON.parse(spark.tags) as string[]
-          return filters.tags.some(filterTag => sparkTags.includes(filterTag))
-        } catch (e) {
-          const sparkTags = spark.tags.split(',').map(tag => tag.trim())
-          return filters.tags.some(filterTag => sparkTags.includes(filterTag))
-        }
-      })
-    }
-
-    // Status filtering
-    if (filters.status !== "all") {
-      results = results.filter(spark => spark.status === filters.status)
-    }
-
-    // Date range filtering
-    if (filters.dateFrom) {
-      results = results.filter(spark => new Date(spark.createdAt) >= filters.dateFrom!)
-    }
-    if (filters.dateTo) {
-      results = results.filter(spark => new Date(spark.createdAt) <= filters.dateTo!)
-    }
-
-    // XP range filtering
-    results = results.filter(spark => 
-      spark.xp >= filters.xpRange[0] && spark.xp <= filters.xpRange[1]
-    )
-
-    return results
-  }, [state.sparks, filters])
+  const selectSuggestion = useCallback((suggestion: string) => {
+    updateFilters({ query: suggestion })
+    setShowSuggestions(false)
+  }, [])
 
   // Notify parent component of filtered results
   useEffect(() => {
@@ -143,21 +162,115 @@ export function AdvancedSearch({ onFiltersChange }: AdvancedSearchProps) {
       {/* Main Search Bar */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-        <Input
-          placeholder="Search sparks, todos, content..."
-          value={filters.query}
-          onChange={(e) => updateFilters({ query: e.target.value })}
-          className="pl-10 pr-10"
-        />
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowFilters(!showFilters)}
-          className="absolute right-1 top-1/2 transform -translate-y-1/2"
-        >
-          <Filter className="h-4 w-4" />
-        </Button>
+        <div className="relative">
+          <Input
+            placeholder="Search sparks, todos, content..."
+            value={filters.query}
+            onChange={(e) => handleQueryChange(e.target.value)}
+            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+            className="pl-10 pr-20"
+          />
+          <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSearchConfig(!showSearchConfig)}
+              title="Search Settings"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {/* Search Suggestions */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border rounded-md shadow-md">
+              {suggestions.map((suggestion, index) => (
+                <button
+                  key={index}
+                  className="w-full text-left px-3 py-2 hover:bg-accent hover:text-accent-foreground text-sm"
+                  onMouseDown={() => selectSuggestion(suggestion)}
+                >
+                  <Search className="inline h-3 w-3 mr-2 text-muted-foreground" />
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        
       </div>
+
+      {/* Search Configuration */}
+      {showSearchConfig && (
+        <div className="p-4 border rounded-lg bg-card space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium">Search Settings</h3>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setSearchConfig({
+                threshold: 0.6,
+                includeMatches: true,
+                fuzzySearch: true
+              })}
+            >
+              Reset
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="fuzzy-search">Fuzzy Search</Label>
+              <Switch
+                id="fuzzy-search"
+                checked={searchConfig.fuzzySearch}
+                onCheckedChange={(checked) => 
+                  setSearchConfig(prev => ({ ...prev, fuzzySearch: checked }))
+                }
+              />
+            </div>
+
+            {searchConfig.fuzzySearch && (
+              <div className="space-y-2">
+                <Label>Match Sensitivity: {Math.round((1 - searchConfig.threshold) * 100)}%</Label>
+                <Slider
+                  value={[searchConfig.threshold]}
+                  onValueChange={([value]) => 
+                    setSearchConfig(prev => ({ ...prev, threshold: value }))
+                  }
+                  min={0.1}
+                  max={0.9}
+                  step={0.1}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Exact</span>
+                  <span>Fuzzy</span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="include-matches">Highlight Matches</Label>
+              <Switch
+                id="include-matches"
+                checked={searchConfig.includeMatches}
+                onCheckedChange={(checked) => 
+                  setSearchConfig(prev => ({ ...prev, includeMatches: checked }))
+                }
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Advanced Filters */}
       {showFilters && (
@@ -264,10 +377,18 @@ export function AdvancedSearch({ onFiltersChange }: AdvancedSearchProps) {
       )}
 
       {/* Results Summary */}
-      {hasActiveFilters && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Sparkles className="h-4 w-4" />
-          Found {filteredSparks.length} spark{filteredSparks.length !== 1 ? 's' : ''} matching your criteria
+      {(hasActiveFilters || filters.query.trim()) && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Sparkles className="h-4 w-4" />
+            Found {filteredSparks.length} spark{filteredSparks.length !== 1 ? 's' : ''}
+            {filters.query.trim() && ` for "${filters.query}"`}
+          </div>
+          {searchConfig.fuzzySearch && filters.query.trim() && (
+            <div className="text-xs text-muted-foreground">
+              Fuzzy: {Math.round((1 - searchConfig.threshold) * 100)}% match
+            </div>
+          )}
         </div>
       )}
     </div>
