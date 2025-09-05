@@ -92,10 +92,12 @@ model Attachment {
 }
 
 model SparkConnection {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
   sparkId1  String
   sparkId2  String
-  createdAt DateTime @default(now())
+  type      ConnectionType @default(RELATED_TO)
+  metadata  Json?
+  createdAt DateTime       @default(now())
   
   spark1 Spark @relation("SparkConnections1", fields: [sparkId1], references: [id], onDelete: Cascade)
   spark2 Spark @relation("SparkConnections2", fields: [sparkId2], references: [id], onDelete: Cascade)
@@ -253,6 +255,13 @@ enum ViewMode {
   CANVAS
   KANBAN
   TIMELINE
+}
+
+enum ConnectionType {
+  DEPENDS_ON
+  RELATED_TO
+  INSPIRES
+  CONFLICTS_WITH
 }
 
 enum NotificationType {

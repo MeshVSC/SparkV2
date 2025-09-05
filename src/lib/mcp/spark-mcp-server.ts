@@ -280,7 +280,7 @@ export class SparkMCPServer {
     return this.readSparks(query)
   }
 
-  async connectSparks(sparkId1: string, sparkId2: string): Promise<void> {
+  async connectSparks(sparkId1: string, sparkId2: string, type?: string, metadata?: any): Promise<void> {
     try {
       // Check if both sparks exist
       const spark1 = await db.spark.findUnique({ where: { id: sparkId1 } })
@@ -308,7 +308,9 @@ export class SparkMCPServer {
       await db.sparkConnection.create({
         data: {
           sparkId1,
-          sparkId2
+          sparkId2,
+          type: type || "RELATED_TO",
+          metadata: metadata || null
         }
       })
 

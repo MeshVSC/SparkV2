@@ -27,6 +27,7 @@ npm run db:generate  # Generate Prisma client
 - **Database**: Prisma ORM + SQLite, NextAuth.js
 - **State**: Zustand, TanStack Query, React Hook Form + Zod
 - **Components**: Radix UI, DND Kit, Recharts
+- **Features**: i18n (Next Intl), drag-and-drop (DND Kit), charts (Recharts)
 
 ## Architecture
 - App Router structure (`src/app/`)
@@ -36,6 +37,10 @@ npm run db:generate  # Generate Prisma client
 
 ## Code Style
 - TypeScript strict mode with relaxed ESLint rules
+- TypeScript-first with Zod validation
+- Utility-first CSS with Tailwind
 - shadcn/ui component patterns, CSS variables for theming
+- Use shadcn/ui components in `src/components/ui/`
+- Follow Next.js App Router conventions in `src/app/`
 - Path aliases: `@/*` → `./src/*`
 - ESLint errors ignored during builds for rapid prototyping

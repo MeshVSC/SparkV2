@@ -59,7 +59,15 @@ export interface SparkConnection {
   id: string
   sparkId1: string
   sparkId2: string
+  type: ConnectionType
+  metadata?: ConnectionMetadata
   createdAt: Date
+}
+
+export interface ConnectionMetadata {
+  strength?: number
+  notes?: string
+  [key: string]: any
 }
 
 export interface Achievement {
@@ -107,6 +115,13 @@ export enum AchievementType {
   MILESTONE = "MILESTONE",
   STREAK = "STREAK",
   COLLECTION = "COLLECTION"
+}
+
+export enum ConnectionType {
+  DEPENDS_ON = "DEPENDS_ON",
+  RELATED_TO = "RELATED_TO",
+  INSPIRES = "INSPIRES",
+  CONFLICTS_WITH = "CONFLICTS_WITH"
 }
 
 export interface Position {
