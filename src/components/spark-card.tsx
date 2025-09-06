@@ -147,7 +147,6 @@ export function SparkCard({ spark, isSelected, onClick, isDragging = false }: Sp
             </DropdownMenu>
           </div>
           
-<<<<<<< HEAD
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 touch:gap-3 touch:mt-2">
               <Badge 

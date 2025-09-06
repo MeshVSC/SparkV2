@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect } from 'react'
 import { Tag, TagStats, CreateTagData, UpdateTagData } from '@/types/tag'
 import { useToast } from '@/hooks/use-toast'
