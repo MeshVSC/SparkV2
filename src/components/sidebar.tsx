@@ -193,6 +193,21 @@ export function Sidebar() {
               </CardContent>
             </Card>
 
+            <Card 
+              className="cursor-pointer hover:bg-accent/50 transition-colors"
+              onClick={() => actions.setViewMode("connections")}
+            >
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4" />
+                  <div>
+                    <h3 className="font-medium text-sm">Connections</h3>
+                    <p className="text-xs text-muted-foreground">Manage spark relationships</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
               <CardContent className="p-3">
                 <Link href="/app/tags" className="flex items-center gap-2">

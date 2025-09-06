@@ -3,6 +3,7 @@
 import { SparkCanvas } from "@/components/spark-canvas"
 import { KanbanView } from "@/components/kanban-view"
 import { TimelineView } from "@/components/timeline-view"
+import { ConnectionManagementPanel } from "@/components/connection-management-panel"
 import { useSpark } from "@/contexts/spark-context"
 
 export default function App() {
@@ -17,6 +18,8 @@ function ViewSwitcher() {
       return <KanbanView />
     case "timeline":
       return <TimelineView />
+    case "connections":
+      return <ConnectionManagementPanel />
     default:
       return <SparkCanvas />
   }

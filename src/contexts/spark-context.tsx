@@ -1,7 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useReducer, useEffect } from "react"
-import { Spark, Todo, Attachment, CreateSparkData } from "@/types/spark"
+import { Spark, Todo, Attachment, CreateSparkData, SparkConnection, ConnectionType } from "@/types/spark"
 import { AchievementService } from "@/lib/achievement-service"
 import { sparkApi } from "@/lib/api/spark-api"
 import { useGuest } from "@/contexts/guest-context"
@@ -11,7 +11,7 @@ interface SparkState {
   selectedSpark: Spark | null
   isLoading: boolean
   error: string | null
-  viewMode: "canvas" | "kanban" | "timeline"
+  viewMode: "canvas" | "kanban" | "timeline" | "connections"
   searchQuery: string
   userStats: any | null
 }
@@ -24,7 +24,7 @@ type SparkAction =
   | { type: "SET_SELECTED_SPARK"; payload: Spark | null }
   | { type: "SET_LOADING"; payload: boolean }
   | { type: "SET_ERROR"; payload: string | null }
-  | { type: "SET_VIEW_MODE"; payload: "canvas" | "kanban" | "timeline" }
+  | { type: "SET_VIEW_MODE"; payload: "canvas" | "kanban" | "timeline" | "connections" }
   | { type: "SET_SEARCH_QUERY"; payload: string }
   | { type: "SET_USER_STATS"; payload: any }
   | { type: "ADD_TODO"; payload: { sparkId: string; todo: Todo } }
@@ -165,7 +165,7 @@ interface SparkContextType {
     updateSpark: (id: string, updates: Partial<Spark>) => Promise<void>
     deleteSpark: (id: string) => Promise<void>
     selectSpark: (spark: Spark | null) => void
-    setViewMode: (mode: "canvas" | "kanban" | "timeline") => void
+    setViewMode: (mode: "canvas" | "kanban" | "timeline" | "connections") => void
     setSearchQuery: (query: string) => void
     addTodo: (sparkId: string, todo: Omit<Todo, "id" | "createdAt">) => Promise<void>
     updateTodo: (sparkId: string, todoId: string, updates: Partial<Todo>) => Promise<void>
@@ -173,6 +173,9 @@ interface SparkContextType {
     uploadAttachment: (sparkId: string, file: File) => Promise<void>
     deleteAttachment: (sparkId: string, attachmentId: string) => Promise<void>
     loadUserStats: () => Promise<void>
+    createSparkConnection: (sparkId1: string, sparkId2: string, type: ConnectionType, metadata?: any) => Promise<void>
+    updateSparkConnection: (connectionId: string, updates: { type?: ConnectionType; metadata?: any }) => Promise<void>
+    deleteSparkConnection: (connectionId: string) => Promise<void>
   }
 }
 
@@ -292,7 +295,7 @@ export function SparkProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: "SET_SELECTED_SPARK", payload: spark })
     },
 
-    setViewMode: (mode: "canvas" | "kanban" | "timeline") => {
+    setViewMode: (mode: "canvas" | "kanban" | "timeline" | "connections") => {
       dispatch({ type: "SET_VIEW_MODE", payload: mode })
       if (isGuest) {
         const currentGuestData = loadGuestData()
@@ -471,6 +474,88 @@ export function SparkProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         dispatch({ type: "SET_ERROR", payload: "Failed to delete attachment" })
+      }
+    },
+
+    createSparkConnection: async (sparkId1: string, sparkId2: string, type: ConnectionType, metadata?: any) => {
+      try {
+        if (isGuest) {
+          // Create connection in guest storage
+          const newConnection: SparkConnection = {
+            id: `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            sparkId1,
+            sparkId2,
+            type,
+            metadata,
+            createdAt: new Date().toISOString(),
+          }
+          
+          const currentGuestData = loadGuestData()
+          const updatedSparks = currentGuestData?.sparks?.map(spark => {
+            if (spark.id === sparkId1) {
+              return { 
+                ...spark, 
+                connections: [...(spark.connections || []), newConnection] 
+              }
+            }
+            return spark
+          }) || []
+          
+          saveGuestData({ sparks: updatedSparks })
+          dispatch({ type: "SET_SPARKS", payload: updatedSparks })
+        } else {
+          // Create connection via API
+          const connection = await sparkApi.createConnection(sparkId1, sparkId2, type, metadata)
+          await actions.loadSparks() // Reload to get updated connections
+        }
+      } catch (error) {
+        dispatch({ type: "SET_ERROR", payload: "Failed to create connection" })
+      }
+    },
+
+    updateSparkConnection: async (connectionId: string, updates: { type?: ConnectionType; metadata?: any }) => {
+      try {
+        if (isGuest) {
+          // Update connection in guest storage
+          const currentGuestData = loadGuestData()
+          const updatedSparks = currentGuestData?.sparks?.map(spark => ({
+            ...spark,
+            connections: spark.connections?.map(conn =>
+              conn.id === connectionId ? { ...conn, ...updates } : conn
+            ) || []
+          })) || []
+          
+          saveGuestData({ sparks: updatedSparks })
+          dispatch({ type: "SET_SPARKS", payload: updatedSparks })
+        } else {
+          // Update connection via API
+          await sparkApi.updateConnection(connectionId, updates)
+          await actions.loadSparks() // Reload to get updated connections
+        }
+      } catch (error) {
+        dispatch({ type: "SET_ERROR", payload: "Failed to update connection" })
+      }
+    },
+
+    deleteSparkConnection: async (connectionId: string) => {
+      try {
+        if (isGuest) {
+          // Delete connection from guest storage
+          const currentGuestData = loadGuestData()
+          const updatedSparks = currentGuestData?.sparks?.map(spark => ({
+            ...spark,
+            connections: spark.connections?.filter(conn => conn.id !== connectionId) || []
+          })) || []
+          
+          saveGuestData({ sparks: updatedSparks })
+          dispatch({ type: "SET_SPARKS", payload: updatedSparks })
+        } else {
+          // Delete connection via API
+          await sparkApi.deleteConnection(connectionId)
+          await actions.loadSparks() // Reload to get updated connections
+        }
+      } catch (error) {
+        dispatch({ type: "SET_ERROR", payload: "Failed to delete connection" })
       }
     },
   }
