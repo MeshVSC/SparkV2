@@ -48,6 +48,8 @@ export class SocketNotificationIntegration {
     if (!this.io) return;
 
     this.io.on('connection', (socket) => {
+      console.log('Notification integration: Socket connected', socket.id);
+
       // Listen for spark-related events that should trigger notifications
       socket.on('spark_content_change', (data) => {
         this.handleSparkContentChange(socket, data);
@@ -61,10 +63,71 @@ export class SocketNotificationIntegration {
         this.handleAchievementUnlocked(socket, data);
       });
 
-      // Handle notification acknowledgments
+      // Enhanced notification handlers
+      socket.on('notification_request', async (data: {
+        targetUserId?: string;
+        workspaceId?: string;
+        type: string;
+        title: string;
+        message: string;
+        priority?: 'low' | 'medium' | 'high' | 'urgent';
+        data?: Record<string, any>;
+      }) => {
+        const userId = (socket as any).userId;
+        if (!userId) return;
+
+        if (data.targetUserId) {
+          // Send to specific user
+          await this.createImmediateNotification(
+            data.targetUserId,
+            data.type as any,
+            data.title,
+            data.message,
+            ['in_app'],
+            data.priority as any || 'medium',
+            data.data
+          );
+        } else if (data.workspaceId) {
+          // Send to workspace
+          this.broadcastNotificationToWorkspace(data.workspaceId, {
+            type: data.type,
+            title: data.title,
+            message: data.message,
+            priority: data.priority || 'medium',
+            data: data.data,
+            senderId: userId
+          });
+        }
+      });
+
+      // Handle notification acknowledgments with enhanced tracking
       socket.on('notification_acknowledged', (data: { notificationId: string; userId: string }) => {
         console.log('Notification acknowledged:', data.notificationId, 'by user:', data.userId);
-        // You could update delivery status or analytics here
+        
+        // Update notification delivery status if using the notification service
+        notificationService.updateDeliveryStatus(data.notificationId, 'acknowledged');
+        
+        // Emit acknowledgment event for analytics
+        notificationService.emitEvent('notification_acknowledged', data.userId, {
+          notificationId: data.notificationId,
+          acknowledgedAt: new Date().toISOString()
+        });
+      });
+
+      // Handle user status updates for targeted notifications
+      socket.on('user_status_change', (data: { status: 'online' | 'away' | 'busy' | 'offline' }) => {
+        const userId = (socket as any).userId;
+        if (!userId) return;
+
+        // Notify notification service about user status change
+        notificationService.emitEvent('user_status_changed', userId, {
+          status: data.status,
+          timestamp: new Date().toISOString()
+        });
+      });
+
+      socket.on('disconnect', () => {
+        console.log('Notification integration: Socket disconnected', socket.id);
       });
     });
   }
@@ -122,21 +185,47 @@ export class SocketNotificationIntegration {
   private broadcastNotificationToUser(userId: string, notification: any): void {
     if (!this.io) return;
 
-    // Find all sockets for this user (they might have multiple sessions)
-    this.io.sockets.sockets.forEach((socket) => {
-      const socketUserId = (socket as any).userId; // Assuming you set userId on socket
-      if (socketUserId === userId) {
-        socket.emit('notification_received', notification);
-      }
-    });
+    // Use the enhanced notification service from socket.ts
+    if ((this.io as any).notificationService) {
+      (this.io as any).notificationService.sendToUser(userId, {
+        id: notification.id || `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: notification.type || 'general',
+        title: notification.title,
+        message: notification.message,
+        userId: userId,
+        data: notification.data,
+        priority: notification.priority || 'medium',
+        channels: ['in_app'],
+        timestamp: notification.timestamp || new Date().toISOString()
+      });
+    } else {
+      // Fallback to room-based approach
+      this.io.to(`user_${userId}`).emit('notification_received', notification);
+    }
   }
 
   // Method to broadcast notifications to workspace rooms
   broadcastNotificationToWorkspace(workspaceId: string, notification: any): void {
     if (!this.io) return;
 
-    const roomKey = `workspace_${workspaceId}`;
-    this.io.to(roomKey).emit('notification_received', notification);
+    // Use the enhanced notification service from socket.ts if available
+    if ((this.io as any).notificationService) {
+      (this.io as any).notificationService.sendToWorkspace(workspaceId, {
+        id: notification.id || `workspace_notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: notification.type || 'workspace',
+        title: notification.title,
+        message: notification.message,
+        userId: 'system',
+        data: { ...notification.data, workspaceId },
+        priority: notification.priority || 'medium',
+        channels: ['in_app'],
+        timestamp: notification.timestamp || new Date().toISOString()
+      });
+    } else {
+      // Fallback to room-based approach
+      const roomKey = `workspace_${workspaceId}`;
+      this.io.to(roomKey).emit('notification_received', notification);
+    }
   }
 
   // Helper method to trigger notifications programmatically

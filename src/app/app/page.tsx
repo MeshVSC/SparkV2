@@ -1,11 +1,16 @@
 "use client"
 
-import { SparkCanvas } from "@/components/spark-canvas"
-import { KanbanView } from "@/components/kanban-view"
-import { TimelineView } from "@/components/timeline-view"
-import { ConnectionManagementPanel } from "@/components/connection-management-panel"
-import { Sidebar } from "@/components/sidebar"
-import { SparkProvider, useSpark } from "@/contexts/spark-context"
+import dynamic from 'next/dynamic'
+
+const SparkProvider = dynamic(() => import('@/contexts/spark-context').then(mod => ({ default: mod.SparkProvider })), { ssr: false })
+const SparkCanvas = dynamic(() => import('@/components/spark-canvas').then(mod => ({ default: mod.SparkCanvas })), { ssr: false })
+const KanbanView = dynamic(() => import('@/components/kanban-view').then(mod => ({ default: mod.KanbanView })), { ssr: false })
+const TimelineView = dynamic(() => import('@/components/timeline-view').then(mod => ({ default: mod.TimelineView })), { ssr: false })
+const Sidebar = dynamic(() => import('@/components/sidebar').then(mod => ({ default: mod.Sidebar })), { ssr: false })
+const ConnectionManagementPanel = dynamic(() => import('@/components/connection-management-panel').then(mod => ({ default: mod.ConnectionManagementPanel })), { ssr: false })
+
+import { useState } from "react"
+import { useSpark } from "@/contexts/spark-context"
 import { useGuest } from "@/contexts/guest-context"
 import { PresenceProvider } from "@/components/collaboration/presence-provider"
 import { OnlineUsersPanel } from "@/components/collaboration/online-users-panel"

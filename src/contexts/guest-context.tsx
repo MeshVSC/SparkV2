@@ -30,6 +30,9 @@ export function GuestProvider({ children }: { children: React.ReactNode }) {
   // Initialize guest mode on mount
   useEffect(() => {
     const checkAuthStatus = () => {
+      // Only run on client side
+      if (typeof window === 'undefined') return
+
       // Check if user is authenticated
       const session = localStorage.getItem('next-auth.session-token')
       if (session) {
@@ -56,7 +59,7 @@ export function GuestProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const loadGuestData = (): GuestData | null => {
-    if (!guestId) return null
+    if (!guestId || typeof window === 'undefined') return null
     
     try {
       const data = localStorage.getItem(`guest_data_${guestId}`)
@@ -79,7 +82,7 @@ export function GuestProvider({ children }: { children: React.ReactNode }) {
   }
 
   const saveGuestData = (data: Partial<GuestData>) => {
-    if (!guestId) return
+    if (!guestId || typeof window === 'undefined') return
 
     try {
       const currentData = loadGuestData() || {
@@ -109,7 +112,7 @@ export function GuestProvider({ children }: { children: React.ReactNode }) {
   }
 
   const clearGuestData = () => {
-    if (!guestId) return
+    if (!guestId || typeof window === 'undefined') return
     
     try {
       localStorage.removeItem(`guest_data_${guestId}`)

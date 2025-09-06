@@ -1,4 +1,6 @@
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
+import jwt from 'jsonwebtoken';
+import { getToken } from 'next-auth/jwt';
 
 interface UserPresence {
   userId: string;
@@ -27,11 +29,168 @@ interface CollaborationRoom {
   activeSparks: Map<string, SparkEditingSession>;
 }
 
+interface UserSession {
+  userId: string;
+  username: string;
+  email: string;
+  avatar?: string;
+  socketIds: Set<string>;
+  lastActivity: Date;
+  authenticatedAt: Date;
+}
+
+interface AuthenticatedSocket extends Socket {
+  userId?: string;
+  sessionId?: string;
+}
+
+interface NotificationEvent {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  userId: string;
+  data?: Record<string, any>;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  channels: string[];
+  timestamp: string;
+}
+
 const collaborationRooms = new Map<string, CollaborationRoom>();
+const userSessions = new Map<string, UserSession>(); // userId -> UserSession
+const socketToUser = new Map<string, string>(); // socketId -> userId
+const notificationQueues = new Map<string, NotificationEvent[]>(); // userId -> pending notifications
+
+// Authentication middleware for socket connections
+const authenticateSocket = async (socket: AuthenticatedSocket): Promise<boolean> => {
+  try {
+    // Get token from handshake auth (client should send token during connection)
+    const token = socket.handshake.auth.token || socket.handshake.query.token;
+    
+    if (!token) {
+      socket.emit('auth_error', { message: 'No authentication token provided' });
+      return false;
+    }
+
+    // Verify JWT token (assuming NextAuth uses JWT)
+    const decodedToken = jwt.verify(token, process.env.NEXTAUTH_SECRET || 'fallback-secret') as any;
+    
+    if (!decodedToken || !decodedToken.sub) {
+      socket.emit('auth_error', { message: 'Invalid token' });
+      return false;
+    }
+
+    const userId = decodedToken.sub;
+    const email = decodedToken.email;
+    const name = decodedToken.name;
+
+    // Set user info on socket
+    socket.userId = userId;
+    socket.sessionId = `${userId}_${Date.now()}`;
+
+    // Join user-specific room for targeted notifications
+    socket.join(`user_${userId}`);
+    
+    // Track socket to user mapping
+    socketToUser.set(socket.id, userId);
+
+    // Update or create user session
+    let userSession = userSessions.get(userId);
+    if (!userSession) {
+      userSession = {
+        userId,
+        username: name || email,
+        email,
+        socketIds: new Set([socket.id]),
+        lastActivity: new Date(),
+        authenticatedAt: new Date()
+      };
+      userSessions.set(userId, userSession);
+      console.log(`New user session created for ${name} (${userId})`);
+    } else {
+      userSession.socketIds.add(socket.id);
+      userSession.lastActivity = new Date();
+      console.log(`User ${name} connected on additional socket. Active sockets: ${userSession.socketIds.size}`);
+    }
+
+    // Send pending notifications if any
+    const pendingNotifications = notificationQueues.get(userId) || [];
+    if (pendingNotifications.length > 0) {
+      socket.emit('pending_notifications', pendingNotifications);
+      notificationQueues.delete(userId);
+    }
+
+    // Emit authentication success
+    socket.emit('authenticated', {
+      userId,
+      username: userSession.username,
+      email: userSession.email,
+      sessionId: socket.sessionId,
+      timestamp: new Date().toISOString()
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Socket authentication error:', error);
+    socket.emit('auth_error', { message: 'Authentication failed' });
+    return false;
+  }
+};
+
+// Clean up user session when socket disconnects
+const cleanupUserSession = (socketId: string) => {
+  const userId = socketToUser.get(socketId);
+  if (!userId) return;
+
+  const userSession = userSessions.get(userId);
+  if (userSession) {
+    userSession.socketIds.delete(socketId);
+    
+    if (userSession.socketIds.size === 0) {
+      // No more active connections, remove session
+      userSessions.delete(userId);
+      console.log(`User session removed for user ${userId}`);
+    } else {
+      console.log(`Socket disconnected for user ${userId}. Remaining sockets: ${userSession.socketIds.size}`);
+    }
+  }
+  
+  socketToUser.delete(socketId);
+};
+
+// Send notification to specific user across all their connections
+const sendNotificationToUser = (userId: string, notification: NotificationEvent, io: Server) => {
+  const userRoom = `user_${userId}`;
+  
+  // Check if user has active sessions
+  const userSession = userSessions.get(userId);
+  if (userSession && userSession.socketIds.size > 0) {
+    // User is online, send immediately
+    io.to(userRoom).emit('notification_received', notification);
+    console.log(`Notification sent to user ${userId} across ${userSession.socketIds.size} connections`);
+  } else {
+    // User is offline, queue notification
+    if (!notificationQueues.has(userId)) {
+      notificationQueues.set(userId, []);
+    }
+    notificationQueues.get(userId)!.push(notification);
+    console.log(`Notification queued for offline user ${userId}`);
+  }
+};
 
 export const setupSocket = (io: Server) => {
-  io.on('connection', (socket) => {
-    console.log('Client connected:', socket.id);
+  // Middleware to authenticate every connection
+  io.use(async (socket: AuthenticatedSocket, next) => {
+    const isAuthenticated = await authenticateSocket(socket);
+    if (isAuthenticated) {
+      next();
+    } else {
+      next(new Error('Authentication failed'));
+    }
+  });
+
+  io.on('connection', (socket: AuthenticatedSocket) => {
+    console.log('Authenticated client connected:', socket.id, 'User:', socket.userId);
     let userPresence: UserPresence | null = null;
     let currentRoom: string | null = null;
 
@@ -207,19 +366,99 @@ export const setupSocket = (io: Server) => {
       }
     });
 
-    // Handle disconnect
-    socket.on('disconnect', () => {
-      console.log('Client disconnected:', socket.id);
+    // Enhanced notification handler for user-specific targeting
+    socket.on('send_notification', async (data: {
+      targetUserId: string;
+      type: string;
+      title: string;
+      message: string;
+      priority?: 'low' | 'medium' | 'high' | 'urgent';
+      data?: Record<string, any>;
+    }) => {
+      if (!socket.userId) return;
+
+      const notification: NotificationEvent = {
+        id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: data.type,
+        title: data.title,
+        message: data.message,
+        userId: data.targetUserId,
+        data: data.data,
+        priority: data.priority || 'medium',
+        channels: ['in_app'],
+        timestamp: new Date().toISOString()
+      };
+
+      sendNotificationToUser(data.targetUserId, notification, io);
+    });
+
+    // Notification acknowledgment
+    socket.on('acknowledge_notification', (data: { notificationId: string }) => {
+      if (!socket.userId) return;
+      
+      console.log(`Notification ${data.notificationId} acknowledged by user ${socket.userId}`);
+      // Could update database or analytics here
+    });
+
+    // Get user presence for all connections
+    socket.on('get_user_presence', (callback) => {
+      const onlineUsers = Array.from(userSessions.values()).map(session => ({
+        userId: session.userId,
+        username: session.username,
+        email: session.email,
+        avatar: session.avatar,
+        activeConnections: session.socketIds.size,
+        lastActivity: session.lastActivity.toISOString(),
+        isOnline: session.socketIds.size > 0
+      }));
+      
+      if (callback) callback({ users: onlineUsers });
+    });
+
+    // Heartbeat to keep connection alive and track activity
+    socket.on('heartbeat', () => {
+      if (socket.userId) {
+        const userSession = userSessions.get(socket.userId);
+        if (userSession) {
+          userSession.lastActivity = new Date();
+        }
+      }
+      socket.emit('heartbeat_ack', { timestamp: new Date().toISOString() });
+    });
+
+    // Handle disconnect with enhanced cleanup
+    socket.on('disconnect', (reason) => {
+      console.log('Client disconnected:', socket.id, 'User:', socket.userId, 'Reason:', reason);
       
       if (currentRoom) {
         handleUserLeave(currentRoom, socket.id);
       }
+      
+      // Clean up user session tracking
+      cleanupUserSession(socket.id);
     });
 
-    // Notification handler
+    // Legacy notification handler (for backwards compatibility)
     socket.on('notification', (data: any) => {
-      // Broadcast notification to the specific user
-      if (currentRoom && userPresence) {
+      // Enhanced to use the new user-specific notification system
+      if (socket.userId) {
+        const notification: NotificationEvent = {
+          id: `legacy_notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          type: data.type || 'general',
+          title: data.title || 'Notification',
+          message: data.message || data.text || 'You have a new notification',
+          userId: socket.userId,
+          data,
+          priority: data.priority || 'medium',
+          channels: ['in_app'],
+          timestamp: new Date().toISOString()
+        };
+
+        // If specific target user is provided, send to them; otherwise send to current user
+        const targetUserId = data.targetUserId || socket.userId;
+        sendNotificationToUser(targetUserId, notification, io);
+      } else if (currentRoom && userPresence) {
+        // Fallback to room-based broadcast for unauthenticated connections
         socket.to(currentRoom).emit('notification_received', {
           ...data,
           timestamp: new Date().toISOString()
@@ -326,4 +565,34 @@ export const setupSocket = (io: Server) => {
       }
     }
   }
+
+  // Expose methods for external notification integration
+  io.notificationService = {
+    sendToUser: (userId: string, notification: NotificationEvent) => {
+      sendNotificationToUser(userId, notification, io);
+    },
+    
+    sendToWorkspace: (workspaceId: string, notification: NotificationEvent) => {
+      const roomKey = `workspace_${workspaceId}`;
+      io.to(roomKey).emit('notification_received', notification);
+    },
+    
+    broadcastToAll: (notification: NotificationEvent) => {
+      io.emit('notification_received', notification);
+    },
+    
+    getOnlineUsers: () => {
+      return Array.from(userSessions.values()).map(session => ({
+        userId: session.userId,
+        username: session.username,
+        email: session.email,
+        activeConnections: session.socketIds.size,
+        lastActivity: session.lastActivity
+      }));
+    },
+    
+    getUserSession: (userId: string) => {
+      return userSessions.get(userId);
+    }
+  };
 };
