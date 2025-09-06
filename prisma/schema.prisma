@@ -343,3 +343,20 @@ enum WorkspaceRole {
   EDITOR
   VIEWER
 }
+
+model Tag {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String   @default("#10b981")
+  parentTagId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Self-referencing relationship
+  parent      Tag?     @relation("TagHierarchy", fields: [parentTagId], references: [id], onDelete: SetNull)
+  children    Tag[]    @relation("TagHierarchy")
+  
+  @@unique([name])
+  @@map("tags")
+}

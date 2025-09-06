@@ -10,4 +10,6 @@ export const db =
     log: ['query'],
   })
 
+export const prisma = db
+
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db

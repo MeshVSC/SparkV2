@@ -20,7 +20,8 @@ import {
   Sparkles,
   Target,
   Trophy,
-  AlertTriangle
+  AlertTriangle,
+  Tag as TagIcon
 } from "lucide-react"
 import { CreateSparkDialog } from "@/components/create-spark-dialog"
 import { AchievementCenter } from "@/components/achievement-center"
@@ -188,6 +189,18 @@ export function Sidebar() {
                     <p className="text-xs text-muted-foreground">Chronological view</p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
+              <CardContent className="p-3">
+                <Link href="/app/tags" className="flex items-center gap-2">
+                  <TagIcon className="h-4 w-4" />
+                  <div>
+                    <h3 className="font-medium text-sm">Tag Management</h3>
+                    <p className="text-xs text-muted-foreground">Organize tags</p>
+                  </div>
+                </Link>
               </CardContent>
             </Card>
           </div>

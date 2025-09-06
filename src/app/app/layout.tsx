@@ -1,6 +1,5 @@
-import { AchievementProvider } from "@/components/achievement-provider"
-import { AuthProvider } from "@/components/auth-provider"
-import { GuestProvider } from "@/contexts/guest-context"
+import { Sidebar } from "@/components/sidebar"
+import { SparkProvider } from "@/contexts/spark-context"
 
 export default function AppLayout({
   children,
@@ -8,12 +7,13 @@ export default function AppLayout({
   children: React.ReactNode
 }) {
   return (
-    <GuestProvider>
-      <AuthProvider>
-        <AchievementProvider>
+    <SparkProvider>
+      <div className="flex h-screen bg-background">
+        <Sidebar />
+        <main className="flex-1 overflow-hidden">
           {children}
-        </AchievementProvider>
-      </AuthProvider>
-    </GuestProvider>
+        </main>
+      </div>
+    </SparkProvider>
   )
 }
