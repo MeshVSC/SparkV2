@@ -28,6 +28,7 @@ import { AchievementCenter } from "@/components/achievement-center"
 import { UserAvatar } from "@/components/user-avatar"
 import { AdvancedSearch } from "@/components/enhanced-search"
 import { NotificationDropdown } from "@/components/notifications/NotificationCenter"
+import { ExportDropdown } from "@/components/export-dropdown"
 import Link from "next/link"
 
 export function Sidebar() {
@@ -247,6 +248,11 @@ export function Sidebar() {
                   <Trophy className="h-3 w-3 mr-2" />
                   Achievement Center
                 </Button>
+                <ExportDropdown
+                  projectName="My Spark Project"
+                  sparks={displaySparks}
+                  connections={state.connections}
+                />
                 <Button variant="outline" size="sm" className="w-full justify-start">
                   <Settings className="h-3 w-3 mr-2" />
                   Settings

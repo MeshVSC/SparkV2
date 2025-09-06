@@ -326,4 +326,228 @@ export class ExportService {
       throw new Error(`Failed to export project to PDF: ${error.message}`);
     }
   }
+
+  /**
+   * Export all project data to JSON format
+   * @param {Object} projectData - The complete project data to export
+   * @returns {Promise<Object>} - Promise resolving to JSON object
+   */
+  static async exportToJSON(projectData) {
+    try {
+      const { 
+        sparks, 
+        connections = [], 
+        userPreferences = {}, 
+        projectName = "Spark Project",
+        user = {},
+        achievements = [],
+        statistics = {},
+        metadata = {}
+      } = projectData;
+
+      if (!sparks || !Array.isArray(sparks)) {
+        throw new Error('Invalid project data: sparks array is required');
+      }
+
+      // Create a comprehensive JSON export structure
+      const exportData = {
+        // Export metadata
+        export: {
+          version: "1.0.0",
+          timestamp: new Date().toISOString(),
+          type: "spark_project_export",
+          projectName: projectName,
+          totalSparks: sparks.length,
+          totalConnections: connections.length
+        },
+
+        // User information
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          totalXP: user.totalXP || 0,
+          level: user.level || 1,
+          currentStreak: user.currentStreak || 0,
+          createdAt: user.createdAt,
+          lastLoginAt: user.lastLoginAt
+        },
+
+        // Project statistics
+        statistics: {
+          totalXP: sparks.reduce((sum, spark) => sum + (spark.xp || 0), 0),
+          completedTodos: sparks.reduce((sum, spark) => 
+            sum + (spark.todos?.filter(todo => todo.completed).length || 0), 0),
+          totalTodos: sparks.reduce((sum, spark) => sum + (spark.todos?.length || 0), 0),
+          sparksByStatus: sparks.reduce((acc, spark) => {
+            acc[spark.status] = (acc[spark.status] || 0) + 1;
+            return acc;
+          }, {}),
+          sparksByLevel: sparks.reduce((acc, spark) => {
+            const level = spark.level || 1;
+            acc[level] = (acc[level] || 0) + 1;
+            return acc;
+          }, {}),
+          attachmentCount: sparks.reduce((sum, spark) => sum + (spark.attachments?.length || 0), 0),
+          averageSparkXP: sparks.length > 0 ? Math.round(sparks.reduce((sum, spark) => sum + (spark.xp || 0), 0) / sparks.length) : 0,
+          ...statistics
+        },
+
+        // User preferences
+        preferences: {
+          theme: userPreferences.theme || 'AUTO',
+          soundEnabled: userPreferences.soundEnabled ?? true,
+          defaultSparkColor: userPreferences.defaultSparkColor || '#10b981',
+          viewMode: userPreferences.viewMode || 'CANVAS',
+          notifications: {
+            email: userPreferences.emailNotifications ?? true,
+            push: userPreferences.pushNotifications ?? true,
+            inApp: userPreferences.inAppNotifications ?? true
+          },
+          ...userPreferences
+        },
+
+        // Sparks data with full details
+        sparks: sparks.map(spark => ({
+          id: spark.id,
+          title: spark.title,
+          description: spark.description,
+          content: spark.content,
+          status: spark.status,
+          level: spark.level || 1,
+          xp: spark.xp || 0,
+          position: {
+            x: spark.positionX,
+            y: spark.positionY
+          },
+          color: spark.color || '#10b981',
+          tags: spark.tags ? (typeof spark.tags === 'string' ? JSON.parse(spark.tags) : spark.tags) : [],
+          createdAt: spark.createdAt,
+          updatedAt: spark.updatedAt,
+          
+          // Todos with full details
+          todos: (spark.todos || []).map(todo => ({
+            id: todo.id,
+            title: todo.title,
+            description: todo.description,
+            completed: todo.completed,
+            type: todo.type || 'GENERAL',
+            priority: todo.priority || 'MEDIUM',
+            position: {
+              x: todo.positionX,
+              y: todo.positionY
+            },
+            createdAt: todo.createdAt,
+            completedAt: todo.completedAt
+          })),
+
+          // Attachments with metadata
+          attachments: (spark.attachments || []).map(attachment => ({
+            id: attachment.id,
+            filename: attachment.filename,
+            url: attachment.url,
+            type: attachment.type,
+            size: attachment.size,
+            createdAt: attachment.createdAt
+          }))
+        })),
+
+        // Connection relationships
+        connections: connections.map(connection => ({
+          id: connection.id,
+          sparkId1: connection.sparkId1,
+          sparkId2: connection.sparkId2,
+          type: connection.type || 'RELATED_TO',
+          metadata: connection.metadata,
+          createdAt: connection.createdAt,
+          // Include spark titles for readability
+          spark1Title: sparks.find(s => s.id === connection.sparkId1)?.title,
+          spark2Title: sparks.find(s => s.id === connection.sparkId2)?.title
+        })),
+
+        // Achievement data
+        achievements: achievements.map(achievement => ({
+          id: achievement.id,
+          achievementId: achievement.achievementId,
+          name: achievement.name,
+          description: achievement.description,
+          icon: achievement.icon,
+          xpReward: achievement.xpReward,
+          type: achievement.type,
+          unlockedAt: achievement.unlockedAt,
+          createdAt: achievement.createdAt
+        })),
+
+        // Additional metadata
+        metadata: {
+          exportedBy: user.id,
+          exportedAt: new Date().toISOString(),
+          sparkCanvasVersion: "1.0.0",
+          dataIntegrity: {
+            sparksCount: sparks.length,
+            connectionsCount: connections.length,
+            todosCount: sparks.reduce((sum, spark) => sum + (spark.todos?.length || 0), 0),
+            attachmentsCount: sparks.reduce((sum, spark) => sum + (spark.attachments?.length || 0), 0),
+            achievementsCount: achievements.length
+          },
+          ...metadata
+        }
+      };
+
+      // Validate export data structure
+      this._validateExportData(exportData);
+
+      return exportData;
+    } catch (error) {
+      console.error('Error exporting to JSON:', error);
+      throw new Error(`Failed to export to JSON: ${error.message}`);
+    }
+  }
+
+  /**
+   * Validate the export data structure
+   * @private
+   * @param {Object} exportData - The export data to validate
+   * @throws {Error} - If validation fails
+   */
+  static _validateExportData(exportData) {
+    const requiredFields = ['export', 'user', 'sparks', 'connections', 'metadata'];
+    
+    for (const field of requiredFields) {
+      if (!exportData[field]) {
+        throw new Error(`Missing required field: ${field}`);
+      }
+    }
+
+    if (!Array.isArray(exportData.sparks)) {
+      throw new Error('Sparks must be an array');
+    }
+
+    if (!Array.isArray(exportData.connections)) {
+      throw new Error('Connections must be an array');
+    }
+
+    // Validate spark structure
+    for (const spark of exportData.sparks) {
+      if (!spark.id || !spark.title) {
+        throw new Error('Each spark must have id and title');
+      }
+      
+      if (spark.todos && !Array.isArray(spark.todos)) {
+        throw new Error(`Spark ${spark.id} todos must be an array`);
+      }
+      
+      if (spark.attachments && !Array.isArray(spark.attachments)) {
+        throw new Error(`Spark ${spark.id} attachments must be an array`);
+      }
+    }
+
+    // Validate connection references
+    const sparkIds = new Set(exportData.sparks.map(s => s.id));
+    for (const connection of exportData.connections) {
+      if (!sparkIds.has(connection.sparkId1) || !sparkIds.has(connection.sparkId2)) {
+        throw new Error(`Connection ${connection.id} references non-existent sparks`);
+      }
+    }
+  }
 }

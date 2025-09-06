@@ -380,6 +380,47 @@ export function SparkCanvas() {
     return lines
   }, [state.sparks])
 
+  // Calculate connection lines between sparks
+  const connectionLines = useCallback((): ConnectionLine[] => {
+    const lines: ConnectionLine[] = []
+
+    state.sparks.forEach(spark => {
+      if (spark.connections && spark.connections.length > 0) {
+        spark.connections.forEach(connection => {
+          const connectedSpark = state.sparks.find(s => s.id === connection.sparkId2)
+          if (connectedSpark) {
+            // Only create line once per connection (avoid duplicates)
+            if (!lines.some(line =>
+              (line.fromSparkId === spark.id && line.toSparkId === connectedSpark.id) ||
+              (line.fromSparkId === connectedSpark.id && line.toSparkId === spark.id)
+            )) {
+              // Calculate connection strength based on XP levels and recency
+              const totalXp = spark.xp + connectedSpark.xp
+              const avgLevel = (spark.level + connectedSpark.level) / 2
+              const daysSinceCreation = Math.max(1, 
+                (new Date().getTime() - new Date(connection.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+              )
+              const strength = Math.min(1, (totalXp / 1000 + avgLevel / 10) / Math.sqrt(daysSinceCreation))
+
+              lines.push({
+                id: `${spark.id}-${connectedSpark.id}`,
+                fromSparkId: spark.id,
+                toSparkId: connectedSpark.id,
+                fromX: (spark.positionX || Math.random() * 600) + 128, // Center of card (card width is 256/2)
+                fromY: (spark.positionY || Math.random() * 400) + 100, // Center of card (approximate height)
+                toX: (connectedSpark.positionX || Math.random() * 600) + 128,
+                toY: (connectedSpark.positionY || Math.random() * 400) + 100,
+                strength,
+                connection,
+              })
+            }
+          }
+        })
+      }
+    })
+
+    return lines
+  }, [state.sparks])
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const { active } = event
     const spark = state.sparks.find(s => s.id === active.id)
@@ -414,7 +455,7 @@ export function SparkCanvas() {
   // Use filtered sparks from search context, fallback to all sparks if no filtering
   const sparksToDisplay = filteredSparks.length > 0 ? filteredSparks : state.sparks
 
-  const connectionLines = getConnectionLines()
+  const connectionLinesData = connectionLines()
 
   return (
     <DndContext
@@ -430,6 +471,8 @@ export function SparkCanvas() {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        data-project-canvas
+        id="spark-canvas"
         style={{
           transform: `translate(${canvasTransform.x}px, ${canvasTransform.y}px) scale(${canvasTransform.scale})`,
           transformOrigin: '0 0',
@@ -467,7 +510,7 @@ export function SparkCanvas() {
               <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.3" />
             </linearGradient>
           </defs>
-          {connectionLines.map((line) => {
+          {connectionLinesData.map((line) => {
             const isHovered = hoveredConnection === line.id
             const strokeWidth = Math.max(2, line.strength * 8)
             const opacity = isHovered ? 0.9 : Math.max(0.3, line.strength * 0.7)

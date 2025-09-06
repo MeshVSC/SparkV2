@@ -69,6 +69,27 @@ async function testExportService() {
     const projectPdf = await ExportService.exportProjectToPDF(mockProjectData);
     console.log('✓ Project PDF generated successfully', projectPdf instanceof Blob);
     
+    // Test JSON export
+    console.log('Testing exportToJSON...');
+    const jsonExport = await ExportService.exportToJSON({
+      ...mockProjectData,
+      user: {
+        id: 'user1',
+        name: 'Test User',
+        email: 'test@example.com',
+        totalXP: 100,
+        level: 1
+      }
+    });
+    console.log('✓ JSON export successful. Sparks:', jsonExport.sparks.length);
+    console.log('  - Export version:', jsonExport.export.version);
+    console.log('  - Total connections:', jsonExport.connections.length);
+    
+    // Validate JSON structure
+    if (!jsonExport.export || !jsonExport.sparks || !jsonExport.user) {
+      throw new Error('JSON export missing required fields');
+    }
+    
     console.log('All tests passed!');
   } catch (error) {
     console.error('Test failed:', error);
