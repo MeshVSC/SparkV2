@@ -185,6 +185,27 @@ export class SocketNotificationIntegration {
       data
     });
   }
+
+  // Comment system specific methods
+  broadcastToEntity(entityId: string, entityType: string, event: string, data: any): void {
+    if (!this.io) return;
+
+    const entityRoom = `entity_${entityType}_${entityId}`;
+    this.io.to(entityRoom).emit(event, data);
+    console.log(`Broadcasting ${event} to entity room: ${entityRoom}`);
+  }
+
+  notifyUser(userId: string, event: string, data: any): void {
+    if (!this.io) return;
+
+    // Find all sockets for this user
+    this.io.sockets.sockets.forEach((socket) => {
+      const socketUserId = (socket as any).userId;
+      if (socketUserId === userId) {
+        socket.emit(event, data);
+      }
+    });
+  }
 }
 
 export const socketNotificationIntegration = SocketNotificationIntegration.getInstance();

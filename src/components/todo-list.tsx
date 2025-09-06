@@ -19,7 +19,8 @@ import {
   Circle, 
   Clock,
   AlertTriangle,
-  Target
+  Target,
+  MessageSquare
 } from "lucide-react"
 import {
   Dialog,
@@ -28,6 +29,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { CommentSection } from "@/components/ui/comment-section"
 
 interface TodoListProps {
   sparkId: string
@@ -41,6 +43,7 @@ interface TodoListProps {
 export function TodoList({ sparkId, todos, onTodoUpdate, onTodoDelete, onTodoAdd, onStatsRefresh }: TodoListProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
+  const [showCommentsFor, setShowCommentsFor] = useState<string | null>(null)
   const [newTodo, setNewTodo] = useState({
     title: "",
     description: "",
@@ -209,15 +212,34 @@ export function TodoList({ sparkId, todos, onTodoUpdate, onTodoDelete, onTodoAdd
                     </p>
                   )}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onTodoDelete(todo.id)}
-                  className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowCommentsFor(showCommentsFor === todo.id ? null : todo.id)}
+                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                  >
+                    <MessageSquare className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onTodoDelete(todo.id)}
+                    className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
+              {showCommentsFor === todo.id && (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <CommentSection
+                    entityId={todo.id}
+                    entityType="TODO"
+                    className="text-sm"
+                  />
+                </div>
+              )}
             </Card>
           ))}
         </div>
@@ -250,15 +272,34 @@ export function TodoList({ sparkId, todos, onTodoUpdate, onTodoDelete, onTodoAdd
                     </p>
                   )}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onTodoDelete(todo.id)}
-                  className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowCommentsFor(showCommentsFor === todo.id ? null : todo.id)}
+                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                  >
+                    <MessageSquare className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onTodoDelete(todo.id)}
+                    className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
+              {showCommentsFor === todo.id && (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <CommentSection
+                    entityId={todo.id}
+                    entityType="TODO"
+                    className="text-sm"
+                  />
+                </div>
+              )}
             </Card>
           ))}
         </div>

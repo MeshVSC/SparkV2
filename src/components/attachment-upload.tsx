@@ -19,8 +19,10 @@ import {
   Trash2, 
   Plus,
   Upload,
-  ExternalLink
+  ExternalLink,
+  MessageSquare
 } from "lucide-react"
+import { CommentSection } from "@/components/ui/comment-section"
 
 interface AttachmentUploadProps {
   sparkId: string
@@ -40,6 +42,7 @@ export function AttachmentUpload({
   const [fileType, setFileType] = useState<AttachmentType>(AttachmentType.FILE)
   const [url, setUrl] = useState("")
   const [isUploading, setIsUploading] = useState(false)
+  const [showCommentsFor, setShowCommentsFor] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileUpload = async (file: File) => {
@@ -248,6 +251,15 @@ export function AttachmentUpload({
               </div>
 
               <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowCommentsFor(showCommentsFor === attachment.id ? null : attachment.id)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <MessageSquare className="h-3 w-3" />
+                </Button>
+                
                 {attachment.type !== AttachmentType.LINK && (
                   <Button
                     variant="ghost"
@@ -278,6 +290,15 @@ export function AttachmentUpload({
                 </Button>
               </div>
             </div>
+            {showCommentsFor === attachment.id && (
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <CommentSection
+                  entityId={attachment.id}
+                  entityType="ATTACHMENT"
+                  className="text-sm"
+                />
+              </div>
+            )}
           </Card>
         ))}
       </div>

@@ -14,7 +14,8 @@ import {
   Circle, 
   Plus,
   Target,
-  Zap
+  Zap,
+  MessageSquare
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useSpark } from "@/contexts/spark-context"
 import { SparkDetailDialog } from "@/components/spark-detail-dialog"
+import { CommentSection } from "@/components/ui/comment-section"
 
 interface SparkCardProps {
   spark: Spark
@@ -36,6 +38,7 @@ export function SparkCard({ spark, isSelected, onClick, isDragging = false }: Sp
   const { actions } = useSpark()
   const [showDetailDialog, setShowDetailDialog] = useState(false)
   const [showTodos, setShowTodos] = useState(false)
+  const [showComments, setShowComments] = useState(false)
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -124,6 +127,13 @@ export function SparkCard({ spark, isSelected, onClick, isDragging = false }: Sp
                 >
                   <Target className="h-3 w-3 mr-2 touch:h-4 touch:w-4 touch:mr-3" />
                   {showTodos ? 'Hide' : 'Show'} Todos
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setShowComments(!showComments)}
+                  className="touch:py-3 touch:px-4 touch:text-base"
+                >
+                  <MessageSquare className="h-3 w-3 mr-2 touch:h-4 touch:w-4 touch:mr-3" />
+                  {showComments ? 'Hide' : 'Show'} Comments
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={handleDelete} 
@@ -224,6 +234,17 @@ export function SparkCard({ spark, isSelected, onClick, isDragging = false }: Sp
                   +{JSON.parse(spark.tags).length - 2}
                 </Badge>
               )}
+            </div>
+          )}
+
+          {/* Comments Section */}
+          {showComments && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <CommentSection
+                entityId={spark.id}
+                entityType="SPARK"
+                className="touch:text-sm"
+              />
             </div>
           )}
         </CardContent>

@@ -37,8 +37,8 @@ model User {
   sessions        Session[]
   accounts        Account[]
   workspaces      UserWorkspace[]
-  comments        Comment[]
-  mentions        Mention[]
+  comments        Comment[] @relation("CommentAuthor")
+  mentions        Mention[] @relation("UserMentions")
   
   @@map("users")
 }
@@ -64,7 +64,6 @@ model Spark {
   attachments Attachment[]
   connections SparkConnection[] @relation("SparkConnections1")
   connectedTo SparkConnection[] @relation("SparkConnections2")
-  comments    Comment[] @relation("SparkComments")
 }
 
 model Todo {
@@ -81,7 +80,6 @@ model Todo {
   completedAt DateTime?
   
   spark Spark @relation(fields: [sparkId], references: [id], onDelete: Cascade)
-  comments Comment[] @relation("TodoComments")
 }
 
 model Attachment {
@@ -220,6 +218,44 @@ model Notification {
   @@map("notifications")
 }
 
+model Comment {
+  id               String      @id @default(cuid())
+  content          String
+  authorId         String
+  parentId         String?     // For threading/replies
+  entityId         String      // ID of spark/todo/attachment
+  entityType       EntityType  // Type of entity being commented on
+  editedAt         DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  
+  // Relations
+  author           User        @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  parent           Comment?    @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies          Comment[]   @relation("CommentReplies")
+  mentions         Mention[]
+  
+  @@index([entityId, entityType])
+  @@index([authorId])
+  @@index([createdAt])
+  @@map("comments")
+}
+
+model Mention {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String   // User being mentioned
+  createdAt DateTime @default(now())
+  
+  // Relations
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation("UserMentions", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([commentId, userId])
+  @@index([userId])
+  @@map("mentions")
+}
+
 enum SparkStatus {
   SEEDLING
   SAPLING
@@ -309,35 +345,6 @@ model UserWorkspace {
   @@map("user_workspaces")
 }
 
-model Comment {
-  id          String    @id @default(cuid())
-  content     String
-  createdAt   DateTime  @default(now())
-  authorId    String
-  sparkId     String?
-  todoId      String?
-  
-  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  spark       Spark?    @relation("SparkComments", fields: [sparkId], references: [id], onDelete: Cascade)
-  todo        Todo?     @relation("TodoComments", fields: [todoId], references: [id], onDelete: Cascade)
-  mentions    Mention[]
-  
-  @@map("comments")
-}
-
-model Mention {
-  id        String   @id @default(cuid())
-  userId    String
-  commentId String
-  createdAt DateTime @default(now())
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, commentId])
-  @@map("mentions")
-}
-
 enum WorkspaceRole {
   OWNER
   EDITOR
@@ -359,4 +366,10 @@ model Tag {
   
   @@unique([name])
   @@map("tags")
+}
+
+enum EntityType {
+  SPARK
+  TODO
+  ATTACHMENT
 }

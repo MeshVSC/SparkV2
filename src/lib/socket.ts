@@ -199,6 +199,47 @@ export const setupSocket = (io: Server) => {
       }
     });
 
+    // Comment system events
+    socket.on('join_entity', (data: { entityId: string; entityType: string }) => {
+      const entityRoom = `entity_${data.entityType}_${data.entityId}`;
+      socket.join(entityRoom);
+      console.log(`Socket ${socket.id} joined entity room: ${entityRoom}`);
+    });
+
+    socket.on('leave_entity', (data: { entityId: string; entityType: string }) => {
+      const entityRoom = `entity_${data.entityType}_${data.entityId}`;
+      socket.leave(entityRoom);
+      console.log(`Socket ${socket.id} left entity room: ${entityRoom}`);
+    });
+
+    // Comment typing indicators
+    socket.on('comment_typing_start', (data: { entityId: string; entityType: string; parentId?: string }) => {
+      if (userPresence) {
+        const entityRoom = `entity_${data.entityType}_${data.entityId}`;
+        socket.to(entityRoom).emit('user_typing', {
+          userId: userPresence.userId,
+          username: userPresence.username,
+          entityId: data.entityId,
+          entityType: data.entityType,
+          parentId: data.parentId,
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
+    socket.on('comment_typing_end', (data: { entityId: string; entityType: string; parentId?: string }) => {
+      if (userPresence) {
+        const entityRoom = `entity_${data.entityType}_${data.entityId}`;
+        socket.to(entityRoom).emit('user_stopped_typing', {
+          userId: userPresence.userId,
+          entityId: data.entityId,
+          entityType: data.entityType,
+          parentId: data.parentId,
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
     // Legacy message handler for backwards compatibility
     socket.on('message', (msg: { text: string; senderId: string }) => {
       socket.emit('message', {
