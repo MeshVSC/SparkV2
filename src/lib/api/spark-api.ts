@@ -1,4 +1,4 @@
-import { Spark, Todo, CreateSparkData, Attachment } from "@/types/spark"
+import { Spark, Todo, CreateSparkData, Attachment, SparkConnection, ConnectionType } from "@/types/spark"
 
 class SparkAPI {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -102,6 +102,35 @@ class SparkAPI {
     return this.request<void>(`/sparks/${sparkId}/attachments/${attachmentId}`, {
       method: "DELETE",
     })
+  }
+
+  async createConnection(sparkId1: string, sparkId2: string, type: ConnectionType, metadata?: any): Promise<SparkConnection> {
+    return this.request<SparkConnection>("/connections", {
+      method: "POST",
+      body: JSON.stringify({
+        sparkId1,
+        sparkId2,
+        type,
+        metadata,
+      }),
+    })
+  }
+
+  async updateConnection(connectionId: string, updates: { type?: ConnectionType; metadata?: any }): Promise<SparkConnection> {
+    return this.request<SparkConnection>(`/connections/${connectionId}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    })
+  }
+
+  async deleteConnection(connectionId: string): Promise<void> {
+    return this.request<void>(`/connections/${connectionId}`, {
+      method: "DELETE",
+    })
+  }
+
+  async getConnections(): Promise<SparkConnection[]> {
+    return this.request<SparkConnection[]>("/connections")
   }
 }
 

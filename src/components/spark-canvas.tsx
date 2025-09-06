@@ -4,10 +4,16 @@ import { useState, useCallback, useRef, useEffect } from "react"
 import { useSpark } from "@/contexts/spark-context"
 import { useSearch } from "@/contexts/search-context"
 import { SparkCard } from "@/components/spark-card"
+import { ConnectionRecommendations } from "@/components/connection-recommendations"
+import { BatchConnectionTools } from "@/components/batch-connection-tools"
+import { DragConnectionOverlay } from "@/components/drag-connection-overlay"
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, PointerSensor, useSensor, useSensors, useDraggable } from "@dnd-kit/core"
-import { Spark, SparkConnection } from "@/types/spark"
+import { Spark, SparkConnection, ConnectionType } from "@/types/spark"
 import { usePresence } from "@/components/collaboration/presence-provider"
 import { UserCursors } from "@/components/collaboration/user-cursors"
+import { Button } from "@/components/ui/button"
+import { Toolbar } from "@/components/ui/toolbar"
+import { Network, Zap, Users } from "lucide-react"
 
 interface ConnectionLine {
   id: string
@@ -78,6 +84,19 @@ export function SparkCanvas() {
   })
   const [hoveredConnection, setHoveredConnection] = useState<string | null>(null)
   const [selectedConnection, setSelectedConnection] = useState<ConnectionLine | null>(null)
+  
+  // Drag-to-connect states
+  const [isDraggingConnection, setIsDraggingConnection] = useState(false)
+  const [dragStartSpark, setDragStartSpark] = useState<Spark | null>(null)
+  const [dragStartPosition, setDragStartPosition] = useState<{ x: number; y: number } | null>(null)
+  const [dragCurrentPosition, setDragCurrentPosition] = useState<{ x: number; y: number } | null>(null)
+  const [dragConnectionType, setDragConnectionType] = useState<ConnectionType>(ConnectionType.RELATED_TO)
+  const [dragTargetSpark, setDragTargetSpark] = useState<Spark | null>(null)
+  
+  // Panel states
+  const [showRecommendations, setShowRecommendations] = useState(false)
+  const [showBatchTools, setShowBatchTools] = useState(false)
+  const [recommendationTarget, setRecommendationTarget] = useState<Spark | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -240,6 +259,77 @@ export function SparkCanvas() {
       }))
     }
   }, [touchGesture, getTouchDistance, getTouchCenter])
+
+  // Mouse event handlers for drag-to-connect
+  const handleSparkMouseDown = useCallback((e: React.MouseEvent, spark: Spark) => {
+    // Only start connection drag on Shift+click to avoid interfering with regular drag
+    if (e.shiftKey) {
+      e.preventDefault()
+      e.stopPropagation()
+      
+      setIsDraggingConnection(true)
+      setDragStartSpark(spark)
+      setDragStartPosition({ x: e.clientX, y: e.clientY })
+      setDragCurrentPosition({ x: e.clientX, y: e.clientY })
+    }
+  }, [])
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isDraggingConnection) {
+      setDragCurrentPosition({ x: e.clientX, y: e.clientY })
+      
+      // Find spark under cursor for highlighting
+      const element = document.elementFromPoint(e.clientX, e.clientY)
+      const sparkCard = element?.closest('[data-spark-id]')
+      if (sparkCard) {
+        const sparkId = sparkCard.getAttribute('data-spark-id')
+        const targetSpark = state.sparks.find(s => s.id === sparkId)
+        if (targetSpark && targetSpark.id !== dragStartSpark?.id) {
+          setDragTargetSpark(targetSpark)
+        } else {
+          setDragTargetSpark(null)
+        }
+      } else {
+        setDragTargetSpark(null)
+      }
+    }
+  }, [isDraggingConnection, dragStartSpark, state.sparks])
+
+  const handleMouseUp = useCallback(async (e: React.MouseEvent) => {
+    if (isDraggingConnection && dragStartSpark && dragTargetSpark) {
+      try {
+        await actions.createSparkConnection(
+          dragStartSpark.id,
+          dragTargetSpark.id,
+          dragConnectionType
+        )
+      } catch (error) {
+        console.error('Failed to create connection:', error)
+      }
+    }
+    
+    // Reset drag state
+    setIsDraggingConnection(false)
+    setDragStartSpark(null)
+    setDragStartPosition(null)
+    setDragCurrentPosition(null)
+    setDragTargetSpark(null)
+  }, [isDraggingConnection, dragStartSpark, dragTargetSpark, dragConnectionType, actions])
+
+  const handleConnectionCreate = useCallback(async (spark1Id: string, spark2Id: string, type: ConnectionType) => {
+    await actions.createSparkConnection(spark1Id, spark2Id, type)
+  }, [actions])
+
+  const handleShowRecommendations = useCallback((spark: Spark) => {
+    setRecommendationTarget(spark)
+    setShowRecommendations(true)
+    setShowBatchTools(false) // Close other panels
+  }, [])
+
+  const handleShowBatchTools = useCallback(() => {
+    setShowBatchTools(true)
+    setShowRecommendations(false) // Close other panels
+  }, [])
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     e.preventDefault()
@@ -499,12 +589,68 @@ export function SparkCanvas() {
   const connectionLinesData = connectionLines()
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
+    <>
+      {/* Toolbar */}
+      <div className="absolute top-4 right-4 z-40 flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleShowRecommendations(state.selectedSpark || state.sparks[0])}
+          disabled={state.sparks.length === 0}
+          className="bg-background/80 backdrop-blur-sm"
+        >
+          <Zap className="h-4 w-4 mr-2" />
+          Suggestions
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleShowBatchTools}
+          disabled={state.sparks.length < 2}
+          className="bg-background/80 backdrop-blur-sm"
+        >
+          <Users className="h-4 w-4 mr-2" />
+          Batch Connect
+        </Button>
+      </div>
+
+      {/* Connection Recommendations Panel */}
+      {showRecommendations && (
+        <div className="absolute top-4 right-4 z-30">
+          <ConnectionRecommendations
+            targetSpark={recommendationTarget}
+            isVisible={showRecommendations}
+            onClose={() => setShowRecommendations(false)}
+            onConnectionCreate={handleConnectionCreate}
+          />
+        </div>
+      )}
+
+      {/* Batch Connection Tools Panel */}
+      {showBatchTools && (
+        <div className="absolute top-4 right-4 z-30">
+          <BatchConnectionTools
+            isVisible={showBatchTools}
+            onClose={() => setShowBatchTools(false)}
+          />
+        </div>
+      )}
+
+      {/* Drag Connection Overlay */}
+      <DragConnectionOverlay
+        isDragging={isDraggingConnection}
+        startPosition={dragStartPosition}
+        currentPosition={dragCurrentPosition}
+        connectionType={dragConnectionType}
+        onTypeChange={setDragConnectionType}
+      />
+
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
       <div
         ref={canvasRef}
         className="relative w-full h-full bg-gradient-to-br from-background to-muted/20 overflow-hidden touch-none"
@@ -513,6 +659,8 @@ export function SparkCanvas() {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
         data-project-canvas
         id="spark-canvas"
         style={{
@@ -639,13 +787,17 @@ export function SparkCanvas() {
         {sparksToDisplay.map((spark) => (
           <div
             key={spark.id}
-            className="absolute transition-all duration-200 hover:scale-105"
+            data-spark-id={spark.id}
+            className={`absolute transition-all duration-200 hover:scale-105 ${
+              dragTargetSpark?.id === spark.id ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+            }`}
             style={{
               left: spark.positionX || Math.random() * 600,
               top: spark.positionY || Math.random() * 400,
               transform: state.selectedSpark?.id === spark.id ? 'scale(1.05)' : 'scale(1)',
               zIndex: state.selectedSpark?.id === spark.id ? 10 : 1,
             }}
+            onMouseDown={(e) => handleSparkMouseDown(e, spark)}
           >
             <DraggableSparkCard
               spark={spark}
@@ -771,8 +923,17 @@ export function SparkCanvas() {
 
         {/* User cursors overlay */}
         <UserCursors containerRef={canvasRef} />
+        
+        {/* Instructions for new users */}
+        <div className="absolute bottom-4 left-4 bg-background/80 backdrop-blur-sm border rounded-lg px-3 py-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Network className="h-4 w-4" />
+            <span>Hold Shift + Drag to create connections</span>
+          </div>
+        </div>
       </div>
     </DndContext>
+    </>
   )
 }
 
