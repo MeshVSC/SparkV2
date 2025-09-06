@@ -7,6 +7,11 @@ interface UserPresence {
   workspaceId: string;
   status: 'online' | 'idle' | 'away';
   lastSeen: string;
+  cursor?: {
+    x: number;
+    y: number;
+    lastUpdate: string;
+  };
 }
 
 interface SparkEditingSession {
@@ -106,6 +111,29 @@ export const setupSocket = (io: Server) => {
             userId: userPresence.userId,
             status: data.status,
             lastSeen: userPresence.lastSeen,
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+    });
+
+    // Cursor position update
+    socket.on('cursor_update', (data: { x: number; y: number }) => {
+      if (currentRoom && userPresence) {
+        const room = collaborationRooms.get(currentRoom);
+        if (room && room.users.has(socket.id)) {
+          userPresence.cursor = {
+            x: data.x,
+            y: data.y,
+            lastUpdate: new Date().toISOString()
+          };
+          room.users.set(socket.id, userPresence);
+
+          // Broadcast cursor update to room members
+          socket.to(currentRoom).emit('cursor_updated', {
+            userId: userPresence.userId,
+            username: userPresence.username,
+            cursor: userPresence.cursor,
             timestamp: new Date().toISOString()
           });
         }

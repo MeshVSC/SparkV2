@@ -58,4 +58,25 @@ function TooltipContent({
   )
 }
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
+// Quick tooltip wrapper for simple use cases
+interface QuickTooltipProps {
+  content: React.ReactNode;
+  children: React.ReactNode;
+  side?: "top" | "right" | "bottom" | "left";
+  delayDuration?: number;
+}
+
+const QuickTooltip = ({ content, children, side = "top", delayDuration = 200 }: QuickTooltipProps) => (
+  <TooltipProvider delayDuration={delayDuration}>
+    <TooltipPrimitive.Root>
+      <TooltipTrigger asChild>
+        {children}
+      </TooltipTrigger>
+      <TooltipContent side={side}>
+        {content}
+      </TooltipContent>
+    </TooltipPrimitive.Root>
+  </TooltipProvider>
+);
+
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider, QuickTooltip }

@@ -26,6 +26,7 @@ import {
 import { useSpark } from "@/contexts/spark-context"
 import { SparkDetailDialog } from "@/components/spark-detail-dialog"
 import { CommentSection } from "@/components/ui/comment-section"
+import { SparkCollaborationIndicator } from "@/components/collaboration/spark-collaboration-indicator"
 
 interface SparkCardProps {
   spark: Spark
@@ -146,16 +147,22 @@ export function SparkCard({ spark, isSelected, onClick, isDragging = false }: Sp
             </DropdownMenu>
           </div>
           
-          <div className="flex items-center gap-2 touch:gap-3 touch:mt-2">
-            <Badge 
-              variant="secondary" 
-              className={`text-xs touch:text-sm touch:py-1 touch:px-2 ${getStatusColor(spark.status)}`}
-            >
-              {spark.status.toLowerCase()}
-            </Badge>
-            <Badge variant="outline" className="text-xs touch:text-sm touch:py-1 touch:px-2">
-              Lvl {spark.level}
-            </Badge>
+<<<<<<< HEAD
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 touch:gap-3 touch:mt-2">
+              <Badge 
+                variant="secondary" 
+                className={`text-xs touch:text-sm touch:py-1 touch:px-2 ${getStatusColor(spark.status)}`}
+              >
+                {spark.status.toLowerCase()}
+              </Badge>
+              <Badge variant="outline" className="text-xs touch:text-sm touch:py-1 touch:px-2">
+                Lvl {spark.level}
+              </Badge>
+            </div>
+            
+            {/* Collaboration indicator */}
+            <SparkCollaborationIndicator sparkId={spark.id} />
           </div>
         </CardHeader>
 

@@ -6,6 +6,8 @@ import { useSearch } from "@/contexts/search-context"
 import { SparkCard } from "@/components/spark-card"
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, PointerSensor, useSensor, useSensors, useDraggable } from "@dnd-kit/core"
 import { Spark, SparkConnection } from "@/types/spark"
+import { usePresence } from "@/components/collaboration/presence-provider"
+import { UserCursors } from "@/components/collaboration/user-cursors"
 
 interface ConnectionLine {
   id: string
@@ -58,6 +60,7 @@ function DraggableSparkCard({ spark, isSelected, onClick }: { spark: Spark; isSe
 export function SparkCanvas() {
   const { state, actions } = useSpark()
   const { filteredSparks } = useSearch()
+  const { updateCursor, startEditingSpark, endEditingSpark, broadcastSparkChange } = usePresence()
   const [activeSpark, setActiveSpark] = useState<Spark | null>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
   const [canvasTransform, setCanvasTransform] = useState({ x: 0, y: 0, scale: 1 })
@@ -440,10 +443,18 @@ export function SparkCanvas() {
         positionX: newPositionX,
         positionY: newPositionY,
       })
+
+      // Broadcast position change to other users
+      broadcastSparkChange({
+        sparkId: spark.id,
+        content: '',
+        changeType: 'position',
+        position: { x: newPositionX, y: newPositionY }
+      })
     }
 
     setActiveSpark(null)
-  }, [state.sparks, actions])
+  }, [state.sparks, actions, broadcastSparkChange])
 
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
     // Only deselect if clicking directly on canvas, not on a spark
@@ -451,6 +462,36 @@ export function SparkCanvas() {
       actions.selectSpark(null)
     }
   }, [actions])
+
+  // Handle mouse movement for cursor tracking
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
+      updateCursor(x, y)
+    }
+  }, [updateCursor])
+
+  // Handle spark selection with collaboration
+  const handleSparkClick = useCallback((spark: Spark) => {
+    actions.selectSpark(spark)
+    startEditingSpark(spark.id)
+  }, [actions, startEditingSpark])
+
+  // Handle spark deselection
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (state.selectedSpark) {
+        endEditingSpark(state.selectedSpark.id)
+      }
+    }
+
+    document.addEventListener('click', handleClickOutside)
+    return () => {
+      document.removeEventListener('click', handleClickOutside)
+    }
+  }, [state.selectedSpark, endEditingSpark])
 
   // Use filtered sparks from search context, fallback to all sparks if no filtering
   const sparksToDisplay = filteredSparks.length > 0 ? filteredSparks : state.sparks
@@ -468,6 +509,7 @@ export function SparkCanvas() {
         ref={canvasRef}
         className="relative w-full h-full bg-gradient-to-br from-background to-muted/20 overflow-hidden touch-none"
         onClick={handleCanvasClick}
+        onMouseMove={handleMouseMove}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -608,7 +650,7 @@ export function SparkCanvas() {
             <DraggableSparkCard
               spark={spark}
               isSelected={state.selectedSpark?.id === spark.id}
-              onClick={() => actions.selectSpark(spark)}
+              onClick={() => handleSparkClick(spark)}
             />
           </div>
         ))}
@@ -726,6 +768,9 @@ export function SparkCanvas() {
             </div>
           ) : null}
         </DragOverlay>
+
+        {/* User cursors overlay */}
+        <UserCursors containerRef={canvasRef} />
       </div>
     </DndContext>
   )

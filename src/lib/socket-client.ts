@@ -15,6 +15,9 @@ export interface SocketEvents {
   presence_updated: (data: { userId: string; status: 'online' | 'idle' | 'away'; lastSeen: string; timestamp: string }) => void;
   room_state: (data: { users: UserPresence[]; activeSparks: SparkEditingSession[]; timestamp: string }) => void;
 
+  // Cursor events
+  cursor_updated: (data: { userId: string; username: string; cursor: { x: number; y: number; lastUpdate: string }; timestamp: string }) => void;
+
   // Spark collaboration events
   spark_editing_started: (data: { sparkId: string; userId: string; username: string; startedAt: string; timestamp: string }) => void;
   spark_editing_ended: (data: { sparkId: string; userId: string; username: string; timestamp: string }) => void;
@@ -49,6 +52,11 @@ export interface UserPresence {
   workspaceId: string;
   status: 'online' | 'idle' | 'away';
   lastSeen: string;
+  cursor?: {
+    x: number;
+    y: number;
+    lastUpdate: string;
+  };
 }
 
 export interface SparkEditingSession {
@@ -70,6 +78,8 @@ export class SocketClient {
   private currentUser: UserPresence | null = null;
   private idleTimer: NodeJS.Timeout | null = null;
   private awayTimer: NodeJS.Timeout | null = null;
+  private cursorUpdateTimer: NodeJS.Timeout | null = null;
+  private lastCursorUpdate: { x: number; y: number } | null = null;
 
   constructor() {
     this.setupActivityTracking();
@@ -120,6 +130,7 @@ export class SocketClient {
     this.connectionStatus = 'disconnected';
     this.currentUser = null;
     this.clearPresenceTimers();
+    this.clearCursorTimer();
     this.notifyStatusChange();
   }
 
@@ -162,6 +173,7 @@ export class SocketClient {
     
     this.socket.emit('user_leave', { workspaceId });
     this.currentUser = null;
+    this.clearCursorTimer();
   }
 
   updatePresence(status: 'online' | 'idle' | 'away'): void {
@@ -169,6 +181,31 @@ export class SocketClient {
     
     this.currentUser.status = status;
     this.socket.emit('presence_update', { status });
+  }
+
+  // Cursor tracking methods
+  updateCursor(x: number, y: number): void {
+    if (!this.socket?.connected) return;
+    
+    this.lastCursorUpdate = { x, y };
+    
+    // Debounce cursor updates to avoid flooding the server
+    if (this.cursorUpdateTimer) {
+      clearTimeout(this.cursorUpdateTimer);
+    }
+    
+    this.cursorUpdateTimer = setTimeout(() => {
+      if (this.lastCursorUpdate && this.socket?.connected) {
+        this.socket.emit('cursor_update', this.lastCursorUpdate);
+      }
+    }, 50); // 20fps update rate
+  }
+
+  private clearCursorTimer(): void {
+    if (this.cursorUpdateTimer) {
+      clearTimeout(this.cursorUpdateTimer);
+      this.cursorUpdateTimer = null;
+    }
   }
 
   // Spark collaboration methods
@@ -206,6 +243,7 @@ export class SocketClient {
       console.log('Socket disconnected:', reason);
       this.connectionStatus = 'disconnected';
       this.clearPresenceTimers();
+      this.clearCursorTimer();
       this.notifyStatusChange();
       this.eventListeners.disconnect?.();
 
@@ -246,20 +284,13 @@ export class SocketClient {
       this.eventListeners.reconnect_failed?.();
     });
 
-    // Application events
-    Object.keys(this.eventListeners).forEach(eventName => {
-      this.socket!.on(eventName, (...args: any[]) => {
-        const listener = this.eventListeners[eventName as keyof SocketEvents] as any;
-        listener?.(...args);
-      });
-    });
-
     // Register all possible events
     this.socket.on('connected', (data) => this.eventListeners.connected?.(data));
     this.socket.on('user_joined', (data) => this.eventListeners.user_joined?.(data));
     this.socket.on('user_left', (data) => this.eventListeners.user_left?.(data));
     this.socket.on('presence_updated', (data) => this.eventListeners.presence_updated?.(data));
     this.socket.on('room_state', (data) => this.eventListeners.room_state?.(data));
+    this.socket.on('cursor_updated', (data) => this.eventListeners.cursor_updated?.(data));
     this.socket.on('spark_editing_started', (data) => this.eventListeners.spark_editing_started?.(data));
     this.socket.on('spark_editing_ended', (data) => this.eventListeners.spark_editing_ended?.(data));
     this.socket.on('spark_content_changed', (data) => this.eventListeners.spark_content_changed?.(data));
