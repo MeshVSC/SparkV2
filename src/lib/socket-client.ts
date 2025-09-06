@@ -66,6 +66,12 @@ export interface SocketEvents {
   pending_notifications: (notifications: NotificationEvent[]) => void;
   heartbeat_ack: (data: { timestamp: string }) => void;
 
+  // Workspace events
+  workspace_change: (data: { type: string; workspaceId: string; data: any; timestamp: string }) => void;
+  workspace_invitation: (data: any) => void;
+  role_updated: (data: any) => void;
+  workspace_removed: (data: any) => void;
+
   // Legacy events
   message: (data: { text: string; senderId: string; timestamp: string }) => void;
 }
@@ -513,6 +519,10 @@ export class SocketClient {
     this.socket.on('spark_editing_started', (data) => this.eventListeners.spark_editing_started?.(data));
     this.socket.on('spark_editing_ended', (data) => this.eventListeners.spark_editing_ended?.(data));
     this.socket.on('spark_content_changed', (data) => this.eventListeners.spark_content_changed?.(data));
+    this.socket.on('workspace_change', (data) => this.eventListeners.workspace_change?.(data));
+    this.socket.on('workspace_invitation', (data) => this.eventListeners.workspace_invitation?.(data));
+    this.socket.on('role_updated', (data) => this.eventListeners.role_updated?.(data));
+    this.socket.on('workspace_removed', (data) => this.eventListeners.workspace_removed?.(data));
     this.socket.on('message', (data) => this.eventListeners.message?.(data));
   }
 
@@ -599,6 +609,46 @@ export class SocketClient {
       connected: this.connectionStatus === 'connected'
     });
     console.log('Connection status changed:', this.connectionStatus);
+  }
+
+  /**
+   * Add an event listener
+   */
+  addEventListener<K extends keyof SocketEvents>(
+    event: K,
+    listener: SocketEvents[K]
+  ): void {
+    this.eventListeners[event] = listener;
+  }
+
+  /**
+   * Remove an event listener
+   */
+  removeEventListener<K extends keyof SocketEvents>(event: K): void {
+    delete this.eventListeners[event];
+  }
+
+  /**
+   * Emit workspace events
+   */
+  emitWorkspaceUpdate(workspaceId: string, update: any): void {
+    if (!this.socket?.connected) return;
+    this.socket.emit('workspace_updated', { workspaceId, update });
+  }
+
+  emitMemberInvited(workspaceId: string, member: any): void {
+    if (!this.socket?.connected) return;
+    this.socket.emit('member_invited', { workspaceId, member });
+  }
+
+  emitMemberRoleUpdated(workspaceId: string, userId: string, role: string): void {
+    if (!this.socket?.connected) return;
+    this.socket.emit('member_role_updated', { workspaceId, userId, role });
+  }
+
+  emitMemberRemoved(workspaceId: string, userId: string): void {
+    if (!this.socket?.connected) return;
+    this.socket.emit('member_removed', { workspaceId, userId });
   }
 }
 

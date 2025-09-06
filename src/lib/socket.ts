@@ -479,6 +479,43 @@ export const setupSocket = (io: Server) => {
       console.log(`Socket ${socket.id} left entity room: ${entityRoom}`);
     });
 
+    // Handle workspace operations
+    socket.on('workspace_updated', (data: { workspaceId: string; update: any }) => {
+      socket.to(`workspace_${data.workspaceId}`).emit('workspace_change', {
+        type: 'workspace_updated',
+        workspaceId: data.workspaceId,
+        data: data.update,
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    socket.on('member_invited', (data: { workspaceId: string; member: any }) => {
+      socket.to(`workspace_${data.workspaceId}`).emit('workspace_change', {
+        type: 'member_invited',
+        workspaceId: data.workspaceId,
+        data: data.member,
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    socket.on('member_role_updated', (data: { workspaceId: string; userId: string; role: string }) => {
+      socket.to(`workspace_${data.workspaceId}`).emit('workspace_change', {
+        type: 'member_role_updated',
+        workspaceId: data.workspaceId,
+        data: { userId: data.userId, role: data.role },
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    socket.on('member_removed', (data: { workspaceId: string; userId: string }) => {
+      socket.to(`workspace_${data.workspaceId}`).emit('workspace_change', {
+        type: 'member_removed',
+        workspaceId: data.workspaceId,
+        data: { userId: data.userId },
+        timestamp: new Date().toISOString()
+      });
+    });
+
     // Comment typing indicators
     socket.on('comment_typing_start', (data: { entityId: string; entityType: string; parentId?: string }) => {
       if (userPresence) {

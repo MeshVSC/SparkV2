@@ -219,6 +219,18 @@ export function Sidebar() {
                 </Link>
               </CardContent>
             </Card>
+
+            <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
+              <CardContent className="p-3">
+                <Link href="/workspaces" className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  <div>
+                    <h3 className="font-medium text-sm">Workspaces</h3>
+                    <p className="text-xs text-muted-foreground">Manage team workspaces</p>
+                  </div>
+                </Link>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 

@@ -295,6 +295,11 @@ export class SocketNotificationIntegration {
       }
     });
   }
+
+  broadcastToWorkspace(workspaceId: string, event: string, data: any): void {
+    if (!this.io) return;
+    this.io.to(`workspace_${workspaceId}`).emit(event, data);
+  }
 }
 
 export const socketNotificationIntegration = SocketNotificationIntegration.getInstance();
