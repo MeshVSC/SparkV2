@@ -40,6 +40,8 @@ model User {
   comments        Comment[] @relation("CommentAuthor")
   mentions        Mention[] @relation("UserMentions")
   templates       Template[]
+  searchHistory   SearchHistory[]
+  savedSearches   SavedSearch[]
   
   @@map("users")
 }
@@ -382,6 +384,40 @@ model Tag {
   
   @@unique([name])
   @@map("tags")
+}
+
+model SearchHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  query     String
+  filters   Json?    // Store complex search filters as JSON
+  resultCount Int?   // Number of results returned
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, createdAt])
+  @@map("search_history")
+}
+
+model SavedSearch {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  query       String
+  filters     Json?    // Store complex search filters as JSON
+  isPublic    Boolean  @default(false)
+  tags        String?  // Comma-separated or JSON
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastUsedAt  DateTime?
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, name])
+  @@index([userId, lastUsedAt])
+  @@map("saved_searches")
 }
 
 enum EntityType {

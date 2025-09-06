@@ -61,13 +61,13 @@ export function useNotifications(userId?: string): NotificationHookReturn {
       setNotifications(prev => [notification, ...prev.slice(0, 99)]); // Keep last 100
       
       // Store in localStorage
-      if (userId) {
+      if (userId && typeof window !== 'undefined') {
         const updated = [notification, ...InAppChannelHandler.getStoredNotifications(userId).slice(0, 99)];
         localStorage.setItem(`notifications_${userId}`, JSON.stringify(updated));
       }
 
       // Show browser notification if permission granted
-      if ('Notification' in window && Notification.permission === 'granted') {
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
         new Notification(data.title, {
           body: data.message,
           icon: '/icon-192x192.png',
@@ -113,14 +113,16 @@ export function useNotifications(userId?: string): NotificationHookReturn {
     );
 
     // Update localStorage
-    const updated = notifications.map(n => ({ ...n, read: true }));
-    localStorage.setItem(`notifications_${userId}`, JSON.stringify(updated));
+    if (typeof window !== 'undefined') {
+      const updated = notifications.map(n => ({ ...n, read: true }));
+      localStorage.setItem(`notifications_${userId}`, JSON.stringify(updated));
+    }
   }, [userId, notifications]);
 
   const clearNotification = useCallback((notificationId: string) => {
     setNotifications(prev => prev.filter(n => n.id !== notificationId));
 
-    if (userId) {
+    if (userId && typeof window !== 'undefined') {
       const updated = notifications.filter(n => n.id !== notificationId);
       localStorage.setItem(`notifications_${userId}`, JSON.stringify(updated));
     }
@@ -152,13 +154,13 @@ export function useNotificationPermission() {
   const [permission, setPermission] = useState<NotificationPermission>('default');
 
   useEffect(() => {
-    if ('Notification' in window) {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
       setPermission(Notification.permission);
     }
   }, []);
 
   const requestPermission = useCallback(async () => {
-    if (!('Notification' in window)) {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
       console.warn('This browser does not support notifications');
       return 'denied';
     }
@@ -175,6 +177,6 @@ export function useNotificationPermission() {
   return {
     permission,
     requestPermission,
-    isSupported: 'Notification' in window
+    isSupported: typeof window !== 'undefined' && 'Notification' in window
   };
 }

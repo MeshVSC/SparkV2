@@ -14,7 +14,11 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Spark, SparkStatus } from "@/types/spark"
 import { useSpark } from "@/contexts/spark-context"
+import { useUser } from "@/contexts/user-context"
 import { searchService, SearchOptions } from "@/lib/search-service"
+import { getSearchHistory } from "@/lib/search-history"
+import { SmartSearchSuggestions } from "@/components/smart-search-suggestions"
+import { SearchHistoryManager } from "@/components/search-history-manager"
 
 interface SearchFilters {
   query: string
@@ -37,6 +41,7 @@ interface AdvancedSearchProps {
 
 export function AdvancedSearch({ onFiltersChange }: AdvancedSearchProps) {
   const { state } = useSpark()
+  const { user } = useUser()
   const [filters, setFilters] = useState<SearchFilters>({
     query: "",
     tags: [],
@@ -50,8 +55,6 @@ export function AdvancedSearch({ onFiltersChange }: AdvancedSearchProps) {
     includeMatches: true,
     fuzzySearch: true
   })
-  const [suggestions, setSuggestions] = useState<string[]>([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
 
   // Initialize search service with sparks data
   useEffect(() => {
@@ -106,24 +109,38 @@ export function AdvancedSearch({ onFiltersChange }: AdvancedSearchProps) {
       .map(result => result.item)
   }, [state.sparks, filters, searchConfig])
 
-  // Handle search suggestions
+  // Handle search with history tracking
+  const handleSearch = useCallback((query: string, searchFilters?: Record<string, any>) => {
+    const finalFilters = { ...filters, query }
+    if (searchFilters) {
+      Object.assign(finalFilters, searchFilters)
+    }
+    
+    setFilters(finalFilters)
+    
+    // Add to local search history
+    getSearchHistory().addSearch(query, filteredSparks.length, finalFilters)
+    
+    // Add to database search history if user is logged in
+    if (user?.id && query.trim()) {
+      fetch('/api/search/history', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          query: query.trim(),
+          filters: finalFilters,
+          resultCount: filteredSparks.length
+        })
+      }).catch(error => console.error('Failed to save search history:', error))
+    }
+  }, [filters, user?.id, filteredSparks.length])
+
   const handleQueryChange = useCallback((value: string) => {
     updateFilters({ query: value })
-    
-    if (value.length >= 2) {
-      const newSuggestions = searchService.getSuggestions(value, 5)
-      setSuggestions(newSuggestions)
-      setShowSuggestions(newSuggestions.length > 0)
-    } else {
-      setSuggestions([])
-      setShowSuggestions(false)
-    }
-  }, [])
-
-  const selectSuggestion = useCallback((suggestion: string) => {
-    updateFilters({ query: suggestion })
-    setShowSuggestions(false)
-  }, [])
+  }, [updateFilters])
 
   // Notify parent component of filtered results
   useEffect(() => {
@@ -159,53 +176,32 @@ export function AdvancedSearch({ onFiltersChange }: AdvancedSearchProps) {
 
   return (
     <div className="space-y-4">
-      {/* Main Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-        <div className="relative">
-          <Input
-            placeholder="Search sparks, todos, content..."
+      {/* Smart Search Bar with Suggestions */}
+      <div className="flex gap-2 items-center">
+        <div className="flex-1">
+          <SmartSearchSuggestions
             value={filters.query}
-            onChange={(e) => handleQueryChange(e.target.value)}
-            onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-            className="pl-10 pr-20"
+            onChange={handleQueryChange}
+            onSearch={handleSearch}
+            placeholder="Search sparks, todos, content..."
+            showSaveSearch={!!user?.id}
           />
-          <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowSearchConfig(!showSearchConfig)}
-              title="Search Settings"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <Filter className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          {/* Search Suggestions */}
-          {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border rounded-md shadow-md">
-              {suggestions.map((suggestion, index) => (
-                <button
-                  key={index}
-                  className="w-full text-left px-3 py-2 hover:bg-accent hover:text-accent-foreground text-sm"
-                  onMouseDown={() => selectSuggestion(suggestion)}
-                >
-                  <Search className="inline h-3 w-3 mr-2 text-muted-foreground" />
-                  {suggestion}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
-        
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowSearchConfig(!showSearchConfig)}
+          title="Search Settings"
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          <Filter className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Search Configuration */}
@@ -389,6 +385,7 @@ export function AdvancedSearch({ onFiltersChange }: AdvancedSearchProps) {
               Fuzzy: {Math.round((1 - searchConfig.threshold) * 100)}% match
             </div>
           )}
+          <SearchHistoryManager onSelectSearch={handleSearch} />
         </div>
       )}
     </div>

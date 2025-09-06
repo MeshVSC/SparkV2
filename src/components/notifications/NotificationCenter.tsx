@@ -38,7 +38,7 @@ export function NotificationDropdown({ userId }: NotificationDropdownProps) {
     markAsRead(notificationId);
     
     // Handle action based on notification type/data
-    if (notification.data?.action) {
+    if (notification.data?.action && typeof window !== 'undefined') {
       const { action, sparkId, url } = notification.data;
       
       if (action === 'navigate' && url) {
