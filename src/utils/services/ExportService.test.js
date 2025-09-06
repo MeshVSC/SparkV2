@@ -89,6 +89,32 @@ async function testExportService() {
     if (!jsonExport.export || !jsonExport.sparks || !jsonExport.user) {
       throw new Error('JSON export missing required fields');
     }
+
+    // Test CSV exports
+    console.log('Testing CSV exports...');
+    
+    // Test sparks CSV export
+    const sparksCSV = await ExportService.exportSparksToCSV([mockSpark]);
+    console.log('✓ Sparks CSV export successful');
+    console.log('  - CSV length:', sparksCSV.length);
+    console.log('  - Headers included:', sparksCSV.includes('id,title'));
+    
+    // Test todos CSV export
+    const todosCSV = await ExportService.exportTodosToCSV([mockSpark]);
+    console.log('✓ Todos CSV export successful');
+    console.log('  - CSV length:', todosCSV.length);
+    console.log('  - Headers included:', todosCSV.includes('id,title'));
+    
+    // Test project statistics CSV export
+    const statsCSV = await ExportService.exportProjectStatsToCSV(mockProjectData);
+    console.log('✓ Project statistics CSV export successful');
+    console.log('  - CSV length:', statsCSV.length);
+    console.log('  - Headers included:', statsCSV.includes('metric,value'));
+    
+    // Test custom field selection for sparks
+    const customSparksCSV = await ExportService.exportSparksToCSV([mockSpark], ['id', 'title', 'status']);
+    console.log('✓ Custom field sparks CSV export successful');
+    console.log('  - Custom headers only:', !customSparksCSV.includes('description'));
     
     console.log('All tests passed!');
   } catch (error) {

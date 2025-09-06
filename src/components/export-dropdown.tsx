@@ -21,7 +21,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Download, FileText, Image, Database } from 'lucide-react'
+import { Download, FileText, Image, Database, FileSpreadsheet } from 'lucide-react'
 import { ExportService } from '@/utils/services/ExportService'
 import { downloadJson, downloadPdf } from '@/utils/file-downloader'
 import { useToast } from '@/hooks/use-toast'
@@ -101,6 +101,63 @@ export function ExportDropdown({
       console.error('Quick JSON export error:', error)
       toast({
         title: 'Export Failed',
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const handleCSVExportClick = async (type: 'sparks' | 'todos' | 'stats') => {
+    try {
+      setIsExporting(true)
+      
+      let csvContent = ''
+      let filename = ''
+      const timestamp = new Date().toISOString().split('T')[0]
+      const projectSlug = projectName.replace(/[^a-zA-Z0-9]/g, '_')
+      
+      switch (type) {
+        case 'sparks':
+          csvContent = await ExportService.exportSparksToCSV(sparks)
+          filename = `${projectSlug}_sparks_${timestamp}.csv`
+          break
+        case 'todos':
+          csvContent = await ExportService.exportTodosToCSV(sparks)
+          filename = `${projectSlug}_todos_${timestamp}.csv`
+          break
+        case 'stats':
+          csvContent = await ExportService.exportProjectStatsToCSV({ 
+            sparks, 
+            connections, 
+            projectName 
+          })
+          filename = `${projectSlug}_statistics_${timestamp}.csv`
+          break
+      }
+      
+      // Create and download the CSV file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      link.setAttribute('download', filename)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      
+      toast({
+        title: 'CSV Export Successful',
+        description: `${type.charAt(0).toUpperCase() + type.slice(1)} data exported as ${filename}`,
+      })
+      
+    } catch (error) {
+      console.error('CSV export error:', error)
+      toast({
+        title: 'CSV Export Failed',
         description: error instanceof Error ? error.message : 'Unknown error occurred',
         variant: 'destructive',
       })
@@ -217,6 +274,23 @@ export function ExportDropdown({
           <DropdownMenuItem onClick={() => handleExportClick('pdf')} disabled={isExporting}>
             <FileText className="h-4 w-4 mr-2" />
             PDF Document
+          </DropdownMenuItem>
+          
+          <DropdownMenuSeparator />
+          
+          <DropdownMenuItem onClick={() => handleCSVExportClick('sparks')} disabled={isExporting}>
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            CSV - Sparks Data
+          </DropdownMenuItem>
+          
+          <DropdownMenuItem onClick={() => handleCSVExportClick('todos')} disabled={isExporting}>
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            CSV - Tasks Data
+          </DropdownMenuItem>
+          
+          <DropdownMenuItem onClick={() => handleCSVExportClick('stats')} disabled={isExporting}>
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            CSV - Project Stats
           </DropdownMenuItem>
           
           <DropdownMenuSeparator />

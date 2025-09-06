@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import Papa from 'papaparse';
 
 export class ExportService {
   /**
@@ -502,6 +503,416 @@ export class ExportService {
       console.error('Error exporting to JSON:', error);
       throw new Error(`Failed to export to JSON: ${error.message}`);
     }
+  }
+
+  /**
+   * Export sparks data to CSV format
+   * @param {Array} sparks - Array of spark objects to export
+   * @param {Array} selectedFields - Optional array of field names to include
+   * @returns {Promise<string>} - Promise resolving to CSV string
+   */
+  static async exportSparksToCSV(sparks, selectedFields = null) {
+    try {
+      if (!sparks || !Array.isArray(sparks)) {
+        throw new Error('Invalid sparks data: array is required');
+      }
+
+      // Default fields for spark export
+      const defaultFields = [
+        'id', 'title', 'description', 'status', 'level', 'xp', 
+        'color', 'tags', 'positionX', 'positionY', 'createdAt', 
+        'updatedAt', 'todoCount', 'completedTodoCount', 'attachmentCount'
+      ];
+
+      const fields = selectedFields || defaultFields;
+
+      // Transform sparks data for CSV export
+      const csvData = sparks.map(spark => {
+        const row = {};
+
+        // Process each field
+        fields.forEach(field => {
+          switch (field) {
+            case 'tags':
+              row[field] = this._serializeTags(spark.tags);
+              break;
+            case 'todoCount':
+              row[field] = spark.todos?.length || 0;
+              break;
+            case 'completedTodoCount':
+              row[field] = spark.todos?.filter(todo => todo.completed).length || 0;
+              break;
+            case 'attachmentCount':
+              row[field] = spark.attachments?.length || 0;
+              break;
+            case 'createdAt':
+            case 'updatedAt':
+              row[field] = spark[field] ? new Date(spark[field]).toISOString() : '';
+              break;
+            default:
+              row[field] = spark[field] || '';
+          }
+        });
+
+        return row;
+      });
+
+      // Generate CSV using papaparse
+      const csv = Papa.unparse(csvData, {
+        header: true,
+        delimiter: ',',
+        quotes: true,
+        skipEmptyLines: true
+      });
+
+      return csv;
+    } catch (error) {
+      console.error('Error exporting sparks to CSV:', error);
+      throw new Error(`Failed to export sparks to CSV: ${error.message}`);
+    }
+  }
+
+  /**
+   * Export todos data to CSV format
+   * @param {Array} sparks - Array of spark objects containing todos
+   * @param {Array} selectedFields - Optional array of field names to include
+   * @returns {Promise<string>} - Promise resolving to CSV string
+   */
+  static async exportTodosToCSV(sparks, selectedFields = null) {
+    try {
+      if (!sparks || !Array.isArray(sparks)) {
+        throw new Error('Invalid sparks data: array is required');
+      }
+
+      // Default fields for todo export
+      const defaultFields = [
+        'id', 'title', 'description', 'completed', 'type', 'priority',
+        'sparkId', 'sparkTitle', 'positionX', 'positionY', 'createdAt', 'completedAt'
+      ];
+
+      const fields = selectedFields || defaultFields;
+
+      // Extract all todos from sparks
+      const csvData = [];
+      sparks.forEach(spark => {
+        if (spark.todos && spark.todos.length > 0) {
+          spark.todos.forEach(todo => {
+            const row = {};
+
+            fields.forEach(field => {
+              switch (field) {
+                case 'sparkId':
+                  row[field] = spark.id;
+                  break;
+                case 'sparkTitle':
+                  row[field] = spark.title;
+                  break;
+                case 'completed':
+                  row[field] = todo.completed ? 'Yes' : 'No';
+                  break;
+                case 'createdAt':
+                case 'completedAt':
+                  row[field] = todo[field] ? new Date(todo[field]).toISOString() : '';
+                  break;
+                default:
+                  row[field] = todo[field] || '';
+              }
+            });
+
+            csvData.push(row);
+          });
+        }
+      });
+
+      // Generate CSV using papaparse
+      const csv = Papa.unparse(csvData, {
+        header: true,
+        delimiter: ',',
+        quotes: true,
+        skipEmptyLines: true
+      });
+
+      return csv;
+    } catch (error) {
+      console.error('Error exporting todos to CSV:', error);
+      throw new Error(`Failed to export todos to CSV: ${error.message}`);
+    }
+  }
+
+  /**
+   * Export project statistics to CSV format
+   * @param {Object} projectData - The project data containing sparks and connections
+   * @param {Array} selectedFields - Optional array of field names to include
+   * @returns {Promise<string>} - Promise resolving to CSV string
+   */
+  static async exportProjectStatsToCSV(projectData, selectedFields = null) {
+    try {
+      const { sparks, connections = [], projectName = "Spark Project", user = {} } = projectData;
+      
+      if (!sparks || !Array.isArray(sparks)) {
+        throw new Error('Invalid project data: sparks array is required');
+      }
+
+      // Default fields for project statistics export
+      const defaultFields = [
+        'metric', 'value', 'category', 'description'
+      ];
+
+      const fields = selectedFields || defaultFields;
+
+      // Calculate comprehensive statistics
+      const stats = this._calculateProjectStatistics(sparks, connections, user);
+
+      // Transform statistics into CSV-friendly format
+      const csvData = [];
+
+      // Project overview stats
+      csvData.push({
+        metric: 'Total Sparks',
+        value: stats.totalSparks,
+        category: 'Overview',
+        description: 'Total number of sparks in the project'
+      });
+
+      csvData.push({
+        metric: 'Total Connections',
+        value: stats.totalConnections,
+        category: 'Overview',
+        description: 'Total number of connections between sparks'
+      });
+
+      csvData.push({
+        metric: 'Total XP',
+        value: stats.totalXP,
+        category: 'Progress',
+        description: 'Total experience points earned'
+      });
+
+      csvData.push({
+        metric: 'Average Spark XP',
+        value: stats.averageSparkXP,
+        category: 'Progress',
+        description: 'Average XP per spark'
+      });
+
+      // Task statistics
+      csvData.push({
+        metric: 'Total Tasks',
+        value: stats.totalTodos,
+        category: 'Tasks',
+        description: 'Total number of tasks across all sparks'
+      });
+
+      csvData.push({
+        metric: 'Completed Tasks',
+        value: stats.completedTodos,
+        category: 'Tasks',
+        description: 'Number of completed tasks'
+      });
+
+      csvData.push({
+        metric: 'Task Completion Rate',
+        value: `${stats.taskCompletionRate}%`,
+        category: 'Tasks',
+        description: 'Percentage of tasks completed'
+      });
+
+      // Status distribution
+      Object.entries(stats.sparksByStatus).forEach(([status, count]) => {
+        csvData.push({
+          metric: `Sparks - ${status}`,
+          value: count,
+          category: 'Status Distribution',
+          description: `Number of sparks with status: ${status}`
+        });
+      });
+
+      // Level distribution
+      Object.entries(stats.sparksByLevel).forEach(([level, count]) => {
+        csvData.push({
+          metric: `Level ${level} Sparks`,
+          value: count,
+          category: 'Level Distribution',
+          description: `Number of sparks at level ${level}`
+        });
+      });
+
+      // Priority distribution (for todos)
+      Object.entries(stats.todosByPriority).forEach(([priority, count]) => {
+        csvData.push({
+          metric: `${priority} Priority Tasks`,
+          value: count,
+          category: 'Task Priority',
+          description: `Number of tasks with ${priority.toLowerCase()} priority`
+        });
+      });
+
+      // Type distribution (for todos)
+      Object.entries(stats.todosByType).forEach(([type, count]) => {
+        csvData.push({
+          metric: `${type} Tasks`,
+          value: count,
+          category: 'Task Type',
+          description: `Number of tasks of type: ${type}`
+        });
+      });
+
+      // Additional metrics
+      csvData.push({
+        metric: 'Total Attachments',
+        value: stats.attachmentCount,
+        category: 'Content',
+        description: 'Total number of attachments across all sparks'
+      });
+
+      csvData.push({
+        metric: 'Unique Tags',
+        value: stats.uniqueTags,
+        category: 'Content',
+        description: 'Number of unique tags used'
+      });
+
+      csvData.push({
+        metric: 'Project Export Date',
+        value: new Date().toISOString(),
+        category: 'Metadata',
+        description: 'Date and time when this export was generated'
+      });
+
+      // Filter by selected fields if provided
+      const filteredData = csvData.map(row => {
+        const filteredRow = {};
+        fields.forEach(field => {
+          filteredRow[field] = row[field] || '';
+        });
+        return filteredRow;
+      });
+
+      // Generate CSV using papaparse
+      const csv = Papa.unparse(filteredData, {
+        header: true,
+        delimiter: ',',
+        quotes: true,
+        skipEmptyLines: true
+      });
+
+      return csv;
+    } catch (error) {
+      console.error('Error exporting project statistics to CSV:', error);
+      throw new Error(`Failed to export project statistics to CSV: ${error.message}`);
+    }
+  }
+
+  /**
+   * Serialize tags for CSV export
+   * @private
+   * @param {Array|string} tags - Tags to serialize
+   * @returns {string} - Comma-separated string of tags
+   */
+  static _serializeTags(tags) {
+    if (!tags) return '';
+    
+    if (typeof tags === 'string') {
+      try {
+        const parsed = JSON.parse(tags);
+        return Array.isArray(parsed) ? parsed.join(', ') : tags;
+      } catch {
+        return tags;
+      }
+    }
+    
+    if (Array.isArray(tags)) {
+      return tags.join(', ');
+    }
+    
+    return String(tags);
+  }
+
+  /**
+   * Calculate comprehensive project statistics
+   * @private
+   * @param {Array} sparks - Array of spark objects
+   * @param {Array} connections - Array of connection objects
+   * @param {Object} user - User object
+   * @returns {Object} - Calculated statistics
+   */
+  static _calculateProjectStatistics(sparks, connections, user) {
+    const stats = {
+      totalSparks: sparks.length,
+      totalConnections: connections.length,
+      totalXP: 0,
+      averageSparkXP: 0,
+      totalTodos: 0,
+      completedTodos: 0,
+      taskCompletionRate: 0,
+      sparksByStatus: {},
+      sparksByLevel: {},
+      todosByPriority: {},
+      todosByType: {},
+      attachmentCount: 0,
+      uniqueTags: 0
+    };
+
+    // Collect all unique tags
+    const allTags = new Set();
+
+    // Process each spark
+    sparks.forEach(spark => {
+      // XP statistics
+      const sparkXP = spark.xp || 0;
+      stats.totalXP += sparkXP;
+
+      // Status distribution
+      stats.sparksByStatus[spark.status] = (stats.sparksByStatus[spark.status] || 0) + 1;
+
+      // Level distribution
+      const level = spark.level || 1;
+      stats.sparksByLevel[level] = (stats.sparksByLevel[level] || 0) + 1;
+
+      // Attachment count
+      stats.attachmentCount += spark.attachments?.length || 0;
+
+      // Process tags
+      if (spark.tags) {
+        let tags = spark.tags;
+        if (typeof tags === 'string') {
+          try {
+            tags = JSON.parse(tags);
+          } catch {
+            tags = [tags];
+          }
+        }
+        if (Array.isArray(tags)) {
+          tags.forEach(tag => allTags.add(tag));
+        }
+      }
+
+      // Process todos
+      if (spark.todos && Array.isArray(spark.todos)) {
+        spark.todos.forEach(todo => {
+          stats.totalTodos++;
+          
+          if (todo.completed) {
+            stats.completedTodos++;
+          }
+
+          // Priority distribution
+          const priority = todo.priority || 'MEDIUM';
+          stats.todosByPriority[priority] = (stats.todosByPriority[priority] || 0) + 1;
+
+          // Type distribution
+          const type = todo.type || 'GENERAL';
+          stats.todosByType[type] = (stats.todosByType[type] || 0) + 1;
+        });
+      }
+    });
+
+    // Calculate derived statistics
+    stats.averageSparkXP = stats.totalSparks > 0 ? Math.round(stats.totalXP / stats.totalSparks) : 0;
+    stats.taskCompletionRate = stats.totalTodos > 0 ? Math.round((stats.completedTodos / stats.totalTodos) * 100) : 0;
+    stats.uniqueTags = allTags.size;
+
+    return stats;
   }
 
   /**
