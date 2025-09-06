@@ -10,7 +10,7 @@ export default function AppLayout({
     <SparkProvider>
       <div className="flex h-screen bg-background">
         <Sidebar />
-        <main className="flex-1 overflow-hidden">
+        <main className="flex-1 overflow-hidden md:ml-0">
           {children}
         </main>
       </div>

@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useSpark } from "@/contexts/spark-context"
 import { useGuest } from "@/contexts/guest-context"
 import { useSearch } from "@/contexts/search-context"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,7 +22,9 @@ import {
   Target,
   Trophy,
   AlertTriangle,
-  Tag as TagIcon
+  Tag as TagIcon,
+  Menu,
+  X
 } from "lucide-react"
 import { CreateSparkDialog } from "@/components/create-spark-dialog"
 import { AchievementCenter } from "@/components/achievement-center"
@@ -30,14 +33,22 @@ import { AdvancedSearch } from "@/components/enhanced-search"
 import { NotificationDropdown } from "@/components/notifications/NotificationCenter"
 import { ExportDropdown } from "@/components/export-dropdown"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
 
 export function Sidebar() {
   const { data: session } = useSession()
   const { state, actions } = useSpark()
   const { isGuest, guestData } = useGuest()
   const { setFilteredSparks } = useSearch()
+  const isMobile = useIsMobile()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isAchievementCenterOpen, setIsAchievementCenterOpen] = useState(false)
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const sidebarRef = useRef<HTMLDivElement>(null)
+  const backdropRef = useRef<HTMLDivElement>(null)
+  const touchStartX = useRef<number | null>(null)
+  const touchStartY = useRef<number | null>(null)
+  const isSwipeFromEdge = useRef(false)
 
   const handleCreateSpark = () => {
     setIsCreateDialogOpen(true)
@@ -46,6 +57,87 @@ export function Sidebar() {
   const handleFiltersChange = (filteredSparks: any[]) => {
     setFilteredSparks(filteredSparks)
   }
+
+  const openMobileSidebar = useCallback(() => {
+    setIsMobileOpen(true)
+  }, [])
+
+  const closeMobileSidebar = useCallback(() => {
+    setIsMobileOpen(false)
+  }, [])
+
+  // Touch event handlers for swipe gestures
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    if (!isMobile) return
+    
+    const touch = e.touches[0]
+    touchStartX.current = touch.clientX
+    touchStartY.current = touch.clientY
+    
+    // Check if touch started from left edge (within 20px)
+    isSwipeFromEdge.current = touch.clientX <= 20 && !isMobileOpen
+  }, [isMobile, isMobileOpen])
+
+  const handleTouchEnd = useCallback((e: TouchEvent) => {
+    if (!isMobile || touchStartX.current === null || touchStartY.current === null) return
+
+    const touch = e.changedTouches[0]
+    const deltaX = touch.clientX - touchStartX.current
+    const deltaY = touch.clientY - touchStartY.current
+    const absDeltaX = Math.abs(deltaX)
+    const absDeltaY = Math.abs(deltaY)
+
+    // Only handle horizontal swipes (more horizontal than vertical)
+    if (absDeltaX < 50 || absDeltaY > absDeltaX) {
+      touchStartX.current = null
+      touchStartY.current = null
+      isSwipeFromEdge.current = false
+      return
+    }
+
+    // Swipe from left edge to open
+    if (isSwipeFromEdge.current && deltaX > 50) {
+      openMobileSidebar()
+    }
+    // Swipe left on open drawer to close
+    else if (isMobileOpen && deltaX < -50) {
+      closeMobileSidebar()
+    }
+
+    touchStartX.current = null
+    touchStartY.current = null
+    isSwipeFromEdge.current = false
+  }, [isMobile, isMobileOpen, openMobileSidebar, closeMobileSidebar])
+
+  // Add touch event listeners
+  useEffect(() => {
+    if (!isMobile) return
+
+    document.addEventListener('touchstart', handleTouchStart, { passive: true })
+    document.addEventListener('touchend', handleTouchEnd, { passive: true })
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart)
+      document.removeEventListener('touchend', handleTouchEnd)
+    }
+  }, [isMobile, handleTouchStart, handleTouchEnd])
+
+  // Handle backdrop click
+  const handleBackdropClick = useCallback((e: React.MouseEvent) => {
+    if (e.target === backdropRef.current) {
+      closeMobileSidebar()
+    }
+  }, [closeMobileSidebar])
+
+  // Prevent body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (isMobile && isMobileOpen) {
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = 'unset'
+      }
+    }
+  }, [isMobile, isMobileOpen])
 
   const displaySparks = state.sparks
 
@@ -59,8 +151,8 @@ export function Sidebar() {
     }
   }
 
-  return (
-    <div className="w-80 bg-card border-r flex flex-col h-full">
+  const SidebarContent = () => (
+    <>
       <div className="p-6 border-b">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -68,6 +160,16 @@ export function Sidebar() {
             <h1 className="text-xl font-bold">Spark</h1>
           </div>
           <div className="flex items-center gap-2">
+            {isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={closeMobileSidebar}
+                className="md:hidden"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
             <NotificationDropdown userId={session?.user?.id} />
             <UserAvatar />
           </div>
@@ -289,6 +391,51 @@ export function Sidebar() {
           </div>
         </TabsContent>
       </Tabs>
+    </>
+  )
+
+  return (
+    <>
+      {/* Desktop Sidebar */}
+      <div className="hidden md:flex w-80 bg-card border-r flex-col h-full">
+        <SidebarContent />
+      </div>
+
+      {/* Mobile Menu Button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={openMobileSidebar}
+        className="fixed top-4 left-4 z-50 md:hidden bg-card border shadow-md"
+      >
+        <Menu className="h-4 w-4" />
+      </Button>
+
+      {/* Mobile Drawer */}
+      {isMobile && (
+        <>
+          {/* Backdrop */}
+          <div
+            ref={backdropRef}
+            className={cn(
+              "fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 md:hidden",
+              isMobileOpen ? "opacity-100 visible" : "opacity-0 invisible"
+            )}
+            onClick={handleBackdropClick}
+          />
+
+          {/* Drawer */}
+          <div
+            ref={sidebarRef}
+            className={cn(
+              "fixed top-0 left-0 z-50 h-full w-80 bg-card border-r flex flex-col transition-transform duration-300 ease-out md:hidden",
+              isMobileOpen ? "translate-x-0" : "-translate-x-full"
+            )}
+          >
+            <SidebarContent />
+          </div>
+        </>
+      )}
 
       <CreateSparkDialog 
         open={isCreateDialogOpen} 
@@ -299,6 +446,6 @@ export function Sidebar() {
         isOpen={isAchievementCenterOpen}
         onOpenChange={setIsAchievementCenterOpen}
       />
-    </div>
+    </>
   )
 }
