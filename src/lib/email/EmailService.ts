@@ -56,6 +56,16 @@ export class EmailService extends EventEmitter {
           pass: config.apiKey
         }
       });
+    } else if (config.provider === 'mailgun') {
+      this.transporter = nodemailer.createTransporter({
+        host: 'smtp.mailgun.org',
+        port: 587,
+        secure: false,
+        auth: {
+          user: `postmaster@${config.domain}`,
+          pass: config.apiKey
+        }
+      });
     }
 
     // Verify connection

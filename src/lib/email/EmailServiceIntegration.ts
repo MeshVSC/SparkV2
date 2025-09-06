@@ -29,6 +29,21 @@ export class EmailServiceIntegration {
 
   private async configureEmailService(): Promise<void> {
     try {
+      // Check for Mailgun configuration first
+      if (process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN) {
+        const config = {
+          provider: 'mailgun' as const,
+          from: process.env.FROM_EMAIL || 'notifications@spark.app',
+          apiKey: process.env.MAILGUN_API_KEY,
+          domain: process.env.MAILGUN_DOMAIN
+        };
+
+        await emailService.configure(config);
+        console.log('Email service configured with Mailgun successfully');
+        return;
+      }
+      
+      // Fallback to other providers
       const provider = process.env.EMAIL_PROVIDER as 'smtp' | 'sendgrid' | 'ses';
       
       if (!provider) {

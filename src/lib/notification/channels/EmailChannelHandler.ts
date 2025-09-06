@@ -33,6 +33,10 @@ export class EmailChannelHandler implements NotificationChannelHandler {
       return false;
     }
     
+    if (config.provider === 'mailgun' && (!config.apiKey || !config.domain)) {
+      return false;
+    }
+    
     if (config.provider === 'smtp' && (!config.host || !config.port)) {
       return false;
     }
@@ -42,9 +46,10 @@ export class EmailChannelHandler implements NotificationChannelHandler {
 }
 
 interface EmailConfig {
-  provider: 'sendgrid' | 'smtp' | 'ses';
+  provider: 'sendgrid' | 'smtp' | 'ses' | 'mailgun';
   fromEmail: string;
   apiKey?: string;
+  domain?: string;
   host?: string;
   port?: number;
   username?: string;
