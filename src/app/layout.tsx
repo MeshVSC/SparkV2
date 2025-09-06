@@ -6,6 +6,7 @@ import { AchievementProvider } from "@/components/achievement-provider";
 import { AuthProvider } from "@/components/auth-provider";
 import { GuestProvider } from "@/contexts/guest-context";
 import { SearchProvider } from "@/contexts/search-context";
+import { ToastNotification } from "@/components/notifications/NotificationToast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -52,6 +53,7 @@ export default function RootLayout({
               <AchievementProvider>
                 {children}
                 <Toaster />
+                <ToastNotification useIntegratedToast={true} />
               </AchievementProvider>
             </SearchProvider>
           </AuthProvider>

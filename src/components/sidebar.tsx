@@ -26,6 +26,7 @@ import { CreateSparkDialog } from "@/components/create-spark-dialog"
 import { AchievementCenter } from "@/components/achievement-center"
 import { UserAvatar } from "@/components/user-avatar"
 import { AdvancedSearch } from "@/components/enhanced-search"
+import { NotificationDropdown } from "@/components/notifications/NotificationCenter"
 import Link from "next/link"
 
 export function Sidebar() {
@@ -57,14 +58,17 @@ export function Sidebar() {
   }
 
   return (
-    <div className="w-80 bg-card border-r border-border flex flex-col h-full">
-      <div className="p-6 border-b border-border">
+    <div className="w-80 bg-card border-r flex flex-col h-full">
+      <div className="p-6 border-b">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-bold">Spark</h1>
           </div>
-          <UserAvatar />
+          <div className="flex items-center gap-2">
+            <NotificationDropdown userId={session?.user?.id} />
+            <UserAvatar />
+          </div>
         </div>
         
         {/* Guest mode warning */}
