@@ -79,12 +79,15 @@ export function SparkCard({ spark, isSelected, onClick, isDragging = false }: Sp
     <>
       <Card
         className={`
-          w-64 shadow-lg transition-all duration-200 cursor-pointer touch-manipulation
+          kanban-card w-64 shadow-lg transition-all duration-200 cursor-pointer touch-manipulation touch-feedback
           ${isSelected ? 'ring-2 ring-primary shadow-xl' : 'hover:shadow-xl active:shadow-2xl active:scale-[1.02]'}
-          ${isDragging ? 'opacity-50 shadow-2xl scale-105' : ''}
-          border-l-4 touch:w-full touch:max-w-none touch:shadow-md
+          ${isDragging ? 'touch-drag-active opacity-90' : 'drag-transition'}
+          border-l-4 touch:w-full touch:max-w-none touch:shadow-md touch-card
         `}
-        style={{ borderLeftColor: spark.color }}
+        style={{ 
+          borderLeftColor: spark.color,
+          touchAction: 'manipulation'
+        }}
         onClick={onClick}
       >
         <CardHeader className="pb-2 touch:pb-3 touch:p-4">
