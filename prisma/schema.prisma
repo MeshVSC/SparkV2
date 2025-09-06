@@ -39,6 +39,7 @@ model User {
   workspaces      UserWorkspace[]
   comments        Comment[] @relation("CommentAuthor")
   mentions        Mention[] @relation("UserMentions")
+  templates       Template[]
   
   @@map("users")
 }
@@ -349,6 +350,21 @@ enum WorkspaceRole {
   OWNER
   EDITOR
   VIEWER
+}
+
+model Template {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  templateData Json     // Serialized project data (sparks, todos, connections, preferences)
+  userId       String
+  isPublic     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("templates")
 }
 
 model Tag {
