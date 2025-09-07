@@ -14,20 +14,21 @@ interface AddTodoDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onAddTodo: (todo: Omit<Todo, "id" | "createdAt">) => Promise<void>
+  sparkId?: string
 }
 
-export function AddTodoDialog({ open, onOpenChange, onAddTodo }: AddTodoDialogProps) {
+export function AddTodoDialog({ open, onOpenChange, onAddTodo, sparkId }: AddTodoDialogProps) {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    type: "GENERAL" as TodoType,
-    priority: "MEDIUM" as TodoPriority,
+    type: "GENERAL",
+    priority: "MEDIUM",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!formData.title.trim()) return
 
     setIsSubmitting(true)
@@ -35,11 +36,12 @@ export function AddTodoDialog({ open, onOpenChange, onAddTodo }: AddTodoDialogPr
       await onAddTodo({
         title: formData.title.trim(),
         description: formData.description.trim() || "",
-        type: formData.type,
-        priority: formData.priority,
+        type: formData.type as TodoType,
+        priority: formData.priority as TodoPriority,
         completed: false,
+        sparkId: sparkId!,
       })
-      
+
       // Reset form
       setFormData({
         title: "",
@@ -47,7 +49,7 @@ export function AddTodoDialog({ open, onOpenChange, onAddTodo }: AddTodoDialogPr
         type: "GENERAL",
         priority: "MEDIUM",
       })
-      
+
       onOpenChange(false)
     } catch (error) {
       console.error("Error adding todo:", error)
@@ -72,7 +74,7 @@ export function AddTodoDialog({ open, onOpenChange, onAddTodo }: AddTodoDialogPr
             Add a new task to help you grow this spark. Todos help you track progress and break down your ideas into actionable steps.
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="todo-title">Title *</Label>
@@ -134,16 +136,16 @@ export function AddTodoDialog({ open, onOpenChange, onAddTodo }: AddTodoDialogPr
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={!formData.title.trim() || isSubmitting}
               className="min-w-[100px]"
             >

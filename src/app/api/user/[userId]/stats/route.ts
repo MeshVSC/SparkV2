@@ -39,16 +39,16 @@ export async function GET(
     // Calculate stats
     const totalSparks = sparks.length
     const totalXP = user.totalXP
-    const totalTodos = sparks.reduce((sum, spark: Spark) => sum + (spark.todos?.length || 0), 0)
+    const totalTodos = sparks.reduce((sum, spark) => sum + (spark.todos?.length || 0), 0)
     const completedTodos = sparks.reduce(
-      (sum, spark: Spark) => sum + (spark.todos?.filter((todo: Todo) => todo.completed).length || 0),
+      (sum, spark) => sum + (spark.todos?.filter((todo) => todo.completed).length || 0),
       0
     )
     const totalAttachments = sparks.reduce((sum, spark) => sum + (spark.attachments?.length || 0), 0)
     const totalConnections = sparks.reduce((sum, spark) => sum + (spark.connections?.length || 0), 0)
 
     // Status breakdown
-    const statusCounts: Record<string, number> = sparks.reduce((acc, spark: Spark) => {
+    const statusCounts: Record<string, number> = sparks.reduce((acc, spark) => {
       acc[spark.status] = (acc[spark.status] || 0) + 1
       return acc
     }, {} as Record<string, number>)
@@ -60,7 +60,7 @@ export async function GET(
     const xpToNextLevel = nextLevelXP - user.totalXP
 
     // Check for potential achievements
-    const potentialAchievements = []
+    const potentialAchievements: string[] = []
 
     // First spark
     if (totalSparks === 1) {

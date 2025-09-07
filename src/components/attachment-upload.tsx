@@ -10,13 +10,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Attachment, AttachmentType } from "@/types/spark"
-import { 
-  Paperclip, 
-  Image, 
-  File, 
-  Link, 
-  Download, 
-  Trash2, 
+import {
+  Paperclip,
+  Image,
+  File,
+  Link,
+  Download,
+  Trash2,
   Plus,
   Upload,
   ExternalLink
@@ -29,11 +29,11 @@ interface AttachmentUploadProps {
   onAttachmentDelete: (attachmentId: string) => void
 }
 
-export function AttachmentUpload({ 
-  sparkId, 
-  attachments, 
-  onAttachmentAdd, 
-  onAttachmentDelete 
+export function AttachmentUpload({
+  sparkId,
+  attachments,
+  onAttachmentAdd,
+  onAttachmentDelete
 }: AttachmentUploadProps) {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)
   const [uploadType, setUploadType] = useState<"file" | "link">("file")
@@ -118,11 +118,11 @@ export function AttachmentUpload({
   const getAttachmentIcon = (type: AttachmentType, filename: string) => {
     switch (type) {
       case AttachmentType.IMAGE:
-        return <Image className="h-4 w-4" alt="Image icon" />
+        return <Image className="h-4 w-4" />
       case AttachmentType.LINK:
-        return <Link className="h-4 w-4" alt="Link icon" />
+        return <Link className="h-4 w-4" />
       default:
-        return <File className="h-4 w-4" alt="File icon" />
+        return <File className="h-4 w-4" />
     }
   }
 
@@ -184,7 +184,7 @@ export function AttachmentUpload({
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="file">File</Label>
                     <Input
@@ -207,9 +207,9 @@ export function AttachmentUpload({
                       onChange={(e) => setUrl(e.target.value)}
                     />
                   </div>
-                  
-                  <Button 
-                    onClick={handleUrlUpload} 
+
+                  <Button
+                    onClick={handleUrlUpload}
                     disabled={!url.trim() || isUploading}
                     className="w-full"
                   >
@@ -229,7 +229,7 @@ export function AttachmentUpload({
               <div className="flex-shrink-0">
                 {getAttachmentIcon(attachment.type, attachment.filename)}
               </div>
-              
+
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <h4 className="text-sm font-medium truncate">
@@ -239,7 +239,7 @@ export function AttachmentUpload({
                     {attachment.type.toLowerCase()}
                   </Badge>
                 </div>
-                
+
                 {attachment.size && (
                   <p className="text-xs text-muted-foreground">
                     {getFileSize(attachment.size)}
@@ -257,7 +257,7 @@ export function AttachmentUpload({
                     <Download className="h-3 w-3" />
                   </Button>
                 )}
-                
+
                 {attachment.type === AttachmentType.LINK && (
                   <Button
                     variant="ghost"
@@ -267,7 +267,7 @@ export function AttachmentUpload({
                     <ExternalLink className="h-3 w-3" />
                   </Button>
                 )}
-                
+
                 <Button
                   variant="ghost"
                   size="sm"

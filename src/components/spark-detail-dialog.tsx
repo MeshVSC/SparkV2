@@ -72,7 +72,7 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!formData.title.trim()) return
 
     const updates = {
@@ -138,7 +138,7 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
 
   const getConnectedSparks = () => {
     if (!spark.connections) return []
-    
+
     return spark.connections
       .map(connection => {
         const connectedSpark = state.sparks.find(s => s.id === connection.sparkId2)
@@ -148,9 +148,9 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
   }
 
   const getAvailableSparksToConnect = () => {
-    return state.sparks.filter(s => 
-      s.id !== spark.id && 
-      !getConnectedSparks().some(connected => connected.id === s.id)
+    return state.sparks.filter(s =>
+      s.id !== spark.id &&
+      !getConnectedSparks().some(connected => connected?.id === s.id)
     )
   }
 
@@ -178,7 +178,7 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
               Update your spark's information, content, and settings. Changes are saved automatically.
             </DialogDescription>
           </DialogHeader>
-          
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -290,15 +290,17 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
                   Connect
                 </Button>
               </div>
-              
+
               {connectedSparks.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {connectedSparks.map((connectedSpark) => (
-                    <Badge key={connectedSpark.id} variant="secondary" className="text-sm">
-                      <Link className="w-3 h-3 mr-1" />
-                      {connectedSpark.title}
-                    </Badge>
-                  ))}
+                  {connectedSparks.map((connectedSpark) =>
+                    connectedSpark ? (
+                      <Badge key={connectedSpark.id} variant="secondary" className="text-sm">
+                        <Link className="w-3 h-3 mr-1" />
+                        {connectedSpark.title}
+                      </Badge>
+                    ) : null
+                  )}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No connections yet. Connect this spark to related ideas!</p>
@@ -322,7 +324,7 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
                   Add Todo
                 </Button>
               </div>
-              
+
               {spark.todos && spark.todos.length > 0 ? (
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {spark.todos.map((todo) => (
@@ -395,9 +397,9 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
             {/* File Upload Section */}
             <div className="space-y-2">
               <Label>Attachments</Label>
-              <FileUploader 
-                sparkId={spark.id} 
-                attachments={spark.attachments || []} 
+              <FileUploader
+                sparkId={spark.id}
+                attachments={spark.attachments || []}
               />
             </div>
 
@@ -422,7 +424,7 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
               Create a connection between related sparks to build a network of ideas and track their relationships.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Select a spark to connect with</Label>
@@ -444,7 +446,7 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
               <Button variant="outline" onClick={() => setShowConnectionDialog(false)}>
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleConnectSpark}
                 disabled={!selectedSparkToConnect}
               >
@@ -456,8 +458,8 @@ export function SparkDetailDialog({ spark, open, onOpenChange }: SparkDetailDial
       </Dialog>
 
       {/* Add Todo Dialog */}
-      <AddTodoDialog 
-        open={showTodoDialog} 
+      <AddTodoDialog
+        open={showTodoDialog}
         onOpenChange={setShowTodoDialog}
         onAddTodo={(todoData) => actions.addTodo(spark.id, todoData)}
       />
