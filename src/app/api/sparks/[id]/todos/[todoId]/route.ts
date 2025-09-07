@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     const todo = await db.todo.findFirst({
-      where: { 
+      where: {
         id: params.todoId,
         sparkId: params.id,
       },
@@ -37,9 +37,9 @@ export async function PUT(
 ) {
   try {
     const body = await request.json()
-    
+
     const existingTodo = await db.todo.findFirst({
-      where: { 
+      where: {
         id: params.todoId,
         sparkId: params.id,
       },
@@ -60,15 +60,15 @@ export async function PUT(
     // Check if todo is being marked as completed (was not completed before)
     const isCompleted = body.completed
     const wasCompleted = existingTodo.completed
-    
+
     let xpAward = 0
     if (isCompleted && !wasCompleted && spark) {
       // Award XP for completing todo
       xpAward = 20
-      
+
       const newSparkXp = spark.xp + xpAward
       const newSparkLevel = Math.floor(newSparkXp / 100) + 1
-      
+
       // Update spark XP and level
       await db.spark.update({
         where: { id: params.id },
@@ -77,16 +77,16 @@ export async function PUT(
           level: newSparkLevel,
         },
       })
-      
+
       // Get user to update their XP
       const user = await db.user.findUnique({
         where: { id: spark.userId },
       })
-      
+
       if (user) {
         const newUserXp = user.totalXP + xpAward
         const newUserLevel = Math.floor(newUserXp / 100) + 1
-        
+
         await db.user.update({
           where: { id: user.id },
           data: {
@@ -100,14 +100,11 @@ export async function PUT(
     // Check for achievements when completing a todo
     if (isCompleted && !wasCompleted && spark) {
       try {
-        await AchievementEngine.checkAndAwardAchievements({
-          type: "TODO_COMPLETED",
-          userId: spark.userId,
-          data: { 
-            sparkId: params.id, 
-            todoId: params.todoId 
-          }
-        })
+        await AchievementEngine.checkAndAwardAchievements(
+          spark.userId,
+          "TODO_COMPLETED",
+          { sparkId: params.id, todoId: params.todoId }
+        )
       } catch (achievementError) {
         console.error("Error checking achievements:", achievementError)
         // Don't fail the todo update if achievement checking fails
@@ -144,7 +141,7 @@ export async function DELETE(
 ) {
   try {
     const existingTodo = await db.todo.findFirst({
-      where: { 
+      where: {
         id: params.todoId,
         sparkId: params.id,
       },

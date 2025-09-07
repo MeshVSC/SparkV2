@@ -9,7 +9,7 @@ export async function POST() {
       create: {
         email: "default@example.com",
         name: "Default User",
-        xp: 0,
+        totalXP: 0,
         level: 1,
       },
     })

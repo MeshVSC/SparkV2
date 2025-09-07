@@ -1,35 +1,36 @@
 import { db } from "@/lib/db"
-import { Achievement, AchievementType, UserAchievement } from "@/types/spark"
+import { Achievement as DBAchievement, $Enums, Prisma } from "@prisma/client"
+type AchievementType = $Enums.AchievementType
 
-export const DEFAULT_ACHIEVEMENTS: Omit<Achievement, "id" | "createdAt">[] = [
+export const DEFAULT_ACHIEVEMENTS: Omit<DBAchievement, "id" | "createdAt">[] = [
   // Creator Achievements
   {
     name: "First Spark",
     description: "Create your first idea",
     icon: "💡",
     xpReward: 50,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
   {
     name: "Idea Factory",
     description: "Create 10 sparks",
     icon: "🏭",
     xpReward: 100,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
   {
     name: "Visionary",
     description: "Create 100 sparks",
     icon: "🔮",
     xpReward: 500,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
   {
     name: "Idea Master",
     description: "Create 500 sparks",
     icon: "👑",
     xpReward: 1000,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
 
   // Progress Achievements
@@ -38,28 +39,28 @@ export const DEFAULT_ACHIEVEMENTS: Omit<Achievement, "id" | "createdAt">[] = [
     description: "Grow 5 sparks to sapling",
     icon: "🌱",
     xpReward: 75,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
   {
     name: "Forest Maker",
     description: "Grow a spark to forest level",
     icon: "🌲",
     xpReward: 200,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
   {
     name: "Evolution Master",
     description: "Complete full spark lifecycle (seedling → forest)",
     icon: "🔄",
     xpReward: 300,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
   {
     name: "Growth Expert",
     description: "Have 20 sparks at tree level or higher",
     icon: "🌳",
     xpReward: 400,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
 
   // Streak Achievements
@@ -68,21 +69,21 @@ export const DEFAULT_ACHIEVEMENTS: Omit<Achievement, "id" | "createdAt">[] = [
     description: "Create sparks for 7 consecutive days",
     icon: "📅",
     xpReward: 150,
-    type: AchievementType.STREAK
+    type: "STREAK"
   },
   {
     name: "Consistency King",
     description: "Create sparks for 30 consecutive days",
     icon: "👑",
     xpReward: 500,
-    type: AchievementType.STREAK
+    type: "STREAK"
   },
   {
     name: "Unstoppable",
     description: "Create sparks for 100 consecutive days",
     icon: "🚀",
     xpReward: 1500,
-    type: AchievementType.STREAK
+    type: "STREAK"
   },
 
   // Organization Achievements
@@ -91,28 +92,28 @@ export const DEFAULT_ACHIEVEMENTS: Omit<Achievement, "id" | "createdAt">[] = [
     description: "Connect 10 sparks together",
     icon: "🔗",
     xpReward: 100,
-    type: AchievementType.COLLECTION
+    type: "COLLECTION"
   },
   {
     name: "Network Builder",
     description: "Connect 50 sparks together",
     icon: "🕸️",
     xpReward: 300,
-    type: AchievementType.COLLECTION
+    type: "COLLECTION"
   },
   {
     name: "Board Master",
     description: "Create sparks in all 4 status categories",
     icon: "📊",
     xpReward: 150,
-    type: AchievementType.COLLECTION
+    type: "COLLECTION"
   },
   {
     name: "Archive Keeper",
     description: "Organize 50 completed sparks",
     icon: "📚",
     xpReward: 250,
-    type: AchievementType.COLLECTION
+    type: "COLLECTION"
   },
 
   // Todo Achievements
@@ -121,21 +122,21 @@ export const DEFAULT_ACHIEVEMENTS: Omit<Achievement, "id" | "createdAt">[] = [
     description: "Complete 100 todos",
     icon: "✅",
     xpReward: 200,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
   {
     name: "Productivity Pro",
     description: "Complete 500 todos",
     icon: "🎯",
     xpReward: 600,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
   {
     name: "Todo Champion",
     description: "Complete 1000 todos",
     icon: "🏆",
     xpReward: 1200,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
 
   // XP Achievements
@@ -144,28 +145,28 @@ export const DEFAULT_ACHIEVEMENTS: Omit<Achievement, "id" | "createdAt">[] = [
     description: "Earn 1000 total XP",
     icon: "⭐",
     xpReward: 100,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
   {
     name: "XP Expert",
     description: "Earn 5000 total XP",
     icon: "🌟",
     xpReward: 300,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
   {
     name: "XP Master",
     description: "Earn 10000 total XP",
     icon: "💫",
     xpReward: 600,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
   {
     name: "XP Legend",
     description: "Earn 25000 total XP",
     icon: "🌠",
     xpReward: 1000,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
 
   // Content Achievements
@@ -174,21 +175,21 @@ export const DEFAULT_ACHIEVEMENTS: Omit<Achievement, "id" | "createdAt">[] = [
     description: "Add descriptions to 50 sparks",
     icon: "📝",
     xpReward: 150,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
   {
     name: "Detail Oriented",
     description: "Add detailed content to 25 sparks",
     icon: "📄",
     xpReward: 200,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
   {
     name: "Tag Enthusiast",
     description: "Use tags on 100 sparks",
     icon: "🏷️",
     xpReward: 175,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
 
   // Attachment Achievements
@@ -197,21 +198,21 @@ export const DEFAULT_ACHIEVEMENTS: Omit<Achievement, "id" | "createdAt">[] = [
     description: "Attach 50 files to sparks",
     icon: "📁",
     xpReward: 200,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
   {
     name: "Link Builder",
     description: "Add 25 external links to sparks",
     icon: "🔗",
     xpReward: 150,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   },
   {
     name: "Media Master",
     description: "Attach 100 files to sparks",
     icon: "🎬",
     xpReward: 400,
-    type: AchievementType.MILESTONE
+    type: "MILESTONE"
   }
 ]
 
@@ -220,18 +221,18 @@ export class AchievementEngine {
     userId: string,
     action: string,
     context?: any
-  ): Promise<{ unlocked: Achievement[]; totalXp: number }> {
-    const unlocked: Achievement[] = []
+  ): Promise<{ unlocked: DBAchievement[]; totalXp: number }> {
+    const unlocked: DBAchievement[] = []
     let totalXp = 0
 
     // Get all achievements
     const allAchievements = await db.achievement.findMany()
-    
+
     // Get user's current achievements
     const userAchievements = await db.userAchievement.findMany({
       where: { userId }
     })
-    
+
     const unlockedIds = new Set(userAchievements.map(ua => ua.achievementId))
 
     // Check each achievement
@@ -239,11 +240,11 @@ export class AchievementEngine {
       if (unlockedIds.has(achievementTemplate.name)) continue
 
       const shouldUnlock = await this.shouldUnlockAchievement(userId, achievementTemplate, action, context)
-      
+
       if (shouldUnlock) {
         // Find or create the achievement
         let achievement = allAchievements.find(a => a.name === achievementTemplate.name)
-        
+
         if (!achievement) {
           achievement = await db.achievement.create({
             data: {
@@ -271,7 +272,7 @@ export class AchievementEngine {
       await db.user.update({
         where: { id: userId },
         data: {
-          xp: {
+          totalXP: {
             increment: totalXp
           }
         }
@@ -283,7 +284,7 @@ export class AchievementEngine {
 
   private static async shouldUnlockAchievement(
     userId: string,
-    achievement: Omit<Achievement, "id" | "createdAt">,
+    achievement: Omit<DBAchievement, "id" | "createdAt">,
     action: string,
     context?: any
   ): Promise<boolean> {
@@ -414,9 +415,9 @@ export class AchievementEngine {
   private static async getUserTotalXP(userId: string): Promise<number> {
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { xp: true }
+      select: { totalXP: true }
     })
-    return user?.xp || 0
+    return user?.totalXP || 0
   }
 
   private static async getConnectionCount(userId: string): Promise<number> {
@@ -438,7 +439,7 @@ export class AchievementEngine {
     })
 
     const statuses = new Set(sparks.map(s => s.status))
-    return statuses.has("SEEDLING") && statuses.has("SAPLING") && 
+    return statuses.has("SEEDLING") && statuses.has("SAPLING") &&
            statuses.has("TREE") && statuses.has("FOREST")
   }
 
@@ -472,7 +473,7 @@ export class AchievementEngine {
 
   private static async getLinkCount(userId: string): Promise<number> {
     const result = await db.attachment.count({
-      where: { 
+      where: {
         spark: { userId },
         type: "LINK"
       }
@@ -481,7 +482,7 @@ export class AchievementEngine {
   }
 
   static async getUserAchievements(userId: string): Promise<{
-    achievements: (Achievement & { unlockedAt: Date | null })[]
+    achievements: (DBAchievement & { unlockedAt: Date | null })[]
     unlockedCount: number
     totalCount: number
   }> {
@@ -492,7 +493,7 @@ export class AchievementEngine {
     })
 
     const unlockedIds = new Set(userAchievements.map(ua => ua.achievementId))
-    
+
     const achievements = allAchievements.map(achievement => ({
       ...achievement,
       unlockedAt: userAchievements.find(ua => ua.achievementId === achievement.id)?.unlockedAt || null
@@ -508,8 +509,8 @@ export class AchievementEngine {
   static async initializeAchievements(): Promise<void> {
     for (const achievementTemplate of DEFAULT_ACHIEVEMENTS) {
       const exists = await db.achievement.findUnique({
-        where: { 
-          id: achievementTemplate.name.toLowerCase().replace(/\s+/g, "-") 
+        where: {
+          id: achievementTemplate.name.toLowerCase().replace(/\s+/g, "-")
         }
       })
 

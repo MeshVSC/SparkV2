@@ -13,13 +13,13 @@ export async function POST(req: NextRequest) {
 
     // Update user streak
     const streakResult = await GamificationService.updateStreak(session.user.id)
-    
+
     if (!streakResult.success) {
       return NextResponse.json({ error: "Failed to update streak" }, { status: 500 })
     }
 
     // Award XP for daily login (only if streak increased or first login)
-    let xpResult = null
+    let xpResult: Awaited<ReturnType<typeof GamificationService.awardXP>> | null = null
     if (streakResult.streak !== streakResult.previousStreak) {
       xpResult = await GamificationService.awardXP(session.user.id, {
         type: 'DAILY_LOGIN',

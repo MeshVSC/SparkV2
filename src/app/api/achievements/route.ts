@@ -42,7 +42,7 @@ const ACHIEVEMENTS = [
     description: "Grow a spark to forest level",
     icon: "🌲",
     xpReward: 200,
-    type: "MILESTONE"
+    type: AchievementType.MILESTONE
   },
   {
     id: "evolution-master",

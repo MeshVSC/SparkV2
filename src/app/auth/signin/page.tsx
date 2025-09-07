@@ -100,8 +100,8 @@ export default function SignIn() {
 
             {/* Sign In Tab */}
             <TabsContent value="signin" className="space-y-4">
-              <SignInForm onSuccess={(userId) => handleAuthSuccess(userId, true)} />
-              
+              <SignInForm onSuccess={() => handleAuthSuccess(undefined, true)} />
+
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <Separator className="w-full" />
@@ -129,7 +129,7 @@ export default function SignIn() {
                     },
                     body: JSON.stringify(formData),
                   })
-                  
+
                   if (response.ok) {
                     const userData = await response.json()
                     // After successful registration, sign in the user
@@ -143,7 +143,7 @@ export default function SignIn() {
                         password: formData.password,
                       }),
                     })
-                    
+
                     if (signInResponse.ok) {
                       const signInData = await signInResponse.json()
                       handleAuthSuccess(signInData.user.id, false)
@@ -231,7 +231,7 @@ export default function SignIn() {
                 We Found Your Work
               </CardTitle>
               <CardDescription>
-                {mergeMode === "signup" 
+                {mergeMode === "signup"
                   ? "Your previous work has been saved to your new account!"
                   : "We found unsaved work from your guest session. Would you like to merge it with your account?"
                 }
@@ -264,8 +264,8 @@ export default function SignIn() {
                       Your work has been successfully saved to your account!
                     </p>
                   </div>
-                  <Button 
-                    onClick={() => router.push("/")} 
+                  <Button
+                    onClick={() => router.push("/")}
                     className="w-full"
                   >
                     Get Started
@@ -274,14 +274,14 @@ export default function SignIn() {
               ) : (
                 <div className="space-y-3">
                   <div className="flex gap-2">
-                    <Button 
-                      onClick={handleMerge} 
+                    <Button
+                      onClick={handleMerge}
                       className="flex-1"
                     >
                       Merge Work
                     </Button>
-                    <Button 
-                      onClick={handleSkipMerge} 
+                    <Button
+                      onClick={handleSkipMerge}
                       variant="outline"
                       className="flex-1"
                     >

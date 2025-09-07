@@ -11,7 +11,6 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/auth/signin",
-    signUp: "/auth/signup",
   },
   providers: [
     CredentialsProvider({
@@ -20,7 +19,7 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, _req) {
         if (!credentials?.email || !credentials?.password) {
           return null
         }
@@ -56,13 +55,9 @@ export const authOptions: NextAuthOptions = {
         return {
           id: user.id,
           email: user.email,
-          name: user.name,
-          avatar: user.avatar,
-          totalXP: user.totalXP,
-          level: user.level,
-          currentStreak: user.currentStreak,
-          preferences: user.preferences,
-        }
+          name: user.name ?? null,
+          image: user.avatar ?? null,
+        } as any
       },
     }),
   ],

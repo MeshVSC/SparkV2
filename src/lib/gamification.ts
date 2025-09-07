@@ -1,4 +1,5 @@
 import { db } from "@/lib/db"
+import type { Achievement as DBAchievement } from "@prisma/client"
 
 export interface XPEvent {
   type: 'SPARK_CREATED' | 'TODO_COMPLETED' | 'ACHIEVEMENT_UNLOCKED' | 'DAILY_LOGIN'
@@ -65,7 +66,7 @@ export class GamificationService {
 
       const now = new Date()
       const lastLogin = user.lastLoginAt ? new Date(user.lastLoginAt) : null
-      
+
       let newStreak = user.currentStreak
 
       if (lastLogin) {
@@ -127,7 +128,7 @@ export class GamificationService {
       }
 
       const unlockedAchievementIds = user.achievements.map(ua => ua.achievementId)
-      
+
       // Get all achievements
       const allAchievements = await db.achievement.findMany({
         where: {
@@ -137,7 +138,7 @@ export class GamificationService {
         }
       })
 
-      const newlyUnlocked = []
+      const newlyUnlocked: DBAchievement[] = []
 
       for (const achievement of allAchievements) {
         let shouldUnlock = false
@@ -153,7 +154,7 @@ export class GamificationService {
               shouldUnlock = true
             }
             break
-          
+
           case 'STREAK':
             // Check streak milestones
             if (achievement.name.includes("7 Day Streak") && user.currentStreak >= 7) {
@@ -162,7 +163,7 @@ export class GamificationService {
               shouldUnlock = true
             }
             break
-          
+
           case 'COLLECTION':
             // Check achievement count milestones
             if (achievement.name.includes("First Achievement") && user.achievements.length >= 1) {
@@ -180,7 +181,7 @@ export class GamificationService {
               achievementId: achievement.id
             }
           })
-          
+
           // Award XP for achievement
           await this.awardXP(userId, {
             type: 'ACHIEVEMENT_UNLOCKED',

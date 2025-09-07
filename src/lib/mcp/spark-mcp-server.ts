@@ -55,7 +55,7 @@ export class SparkMCPServer {
   async readSparks(query?: string): Promise<Spark[]> {
     try {
       let sparks
-      
+
       if (query && query.trim()) {
         const searchQuery = query.trim().toLowerCase()
         sparks = await db.spark.findMany({
@@ -63,26 +63,22 @@ export class SparkMCPServer {
             OR: [
               {
                 title: {
-                  contains: searchQuery,
-                  mode: "insensitive"
+                  contains: searchQuery
                 }
               },
               {
                 description: {
-                  contains: searchQuery,
-                  mode: "insensitive"
+                  contains: searchQuery
                 }
               },
               {
                 content: {
-                  contains: searchQuery,
-                  mode: "insensitive"
+                  contains: searchQuery
                 }
               },
               {
                 tags: {
-                  contains: searchQuery,
-                  mode: "insensitive"
+                  contains: searchQuery
                 }
               }
             ]
@@ -122,13 +118,13 @@ export class SparkMCPServer {
       let user = await db.user.findUnique({
         where: { email: "default@example.com" }
       })
-      
+
       if (!user) {
         user = await db.user.create({
           data: {
             email: "default@example.com",
             name: "Default User",
-            xp: 0,
+            totalXP: 0,
             level: 1
           }
         })
@@ -404,7 +400,7 @@ export class SparkMCPServer {
       const totalSparks = sparks.length
       const totalXP = sparks.reduce((sum, spark) => sum + spark.xp, 0)
       const averageLevel = totalSparks > 0 ? sparks.reduce((sum, spark) => sum + spark.level, 0) / totalSparks : 0
-      
+
       const allTodos = sparks.flatMap(spark => spark.todos)
       const totalTodos = allTodos.length
       const completedTodos = allTodos.filter(todo => todo.completed).length
