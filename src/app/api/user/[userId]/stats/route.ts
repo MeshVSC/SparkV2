@@ -1,8 +1,8 @@
+import type { Spark, Todo } from "@prisma/client"
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 
 export async function GET(
-  request: NextRequest,
   { params }: { params: { userId: string } }
 ) {
   try {
@@ -38,16 +38,17 @@ export async function GET(
 
     // Calculate stats
     const totalSparks = sparks.length
-    const totalXP = sparks.reduce((sum, spark) => sum + spark.xp, 0)
-    const totalTodos = sparks.reduce((sum, spark) => sum + (spark.todos?.length || 0), 0)
-    const completedTodos = sparks.reduce((sum, spark) => 
-      sum + (spark.todos?.filter(todo => todo.completed).length || 0), 0
+    const totalXP = user.totalXP
+    const totalTodos = sparks.reduce((sum, spark: Spark) => sum + (spark.todos?.length || 0), 0)
+    const completedTodos = sparks.reduce(
+      (sum, spark: Spark) => sum + (spark.todos?.filter((todo: Todo) => todo.completed).length || 0),
+      0
     )
     const totalAttachments = sparks.reduce((sum, spark) => sum + (spark.attachments?.length || 0), 0)
     const totalConnections = sparks.reduce((sum, spark) => sum + (spark.connections?.length || 0), 0)
 
     // Status breakdown
-    const statusCounts = sparks.reduce((acc, spark) => {
+    const statusCounts: Record<string, number> = sparks.reduce((acc, spark: Spark) => {
       acc[spark.status] = (acc[spark.status] || 0) + 1
       return acc
     }, {} as Record<string, number>)
@@ -55,57 +56,57 @@ export async function GET(
     // Calculate level progress
     const currentLevelXP = (user.level - 1) * 100
     const nextLevelXP = user.level * 100
-    const levelProgress = ((user.xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100
-    const xpToNextLevel = nextLevelXP - user.xp
+    const levelProgress = ((user.totalXP - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100
+    const xpToNextLevel = nextLevelXP - user.totalXP
 
     // Check for potential achievements
     const potentialAchievements = []
-    
+
     // First spark
     if (totalSparks === 1) {
       potentialAchievements.push("first-spark")
     }
-    
+
     // Idea factory (10 sparks)
     if (totalSparks >= 10) {
       potentialAchievements.push("idea-factory")
     }
-    
+
     // Visionary (100 sparks)
     if (totalSparks >= 100) {
       potentialAchievements.push("visionary")
     }
-    
+
     // Seedling gardener (5 saplings)
     if (statusCounts["SAPLING"] >= 5) {
       potentialAchievements.push("seedling-gardener")
     }
-    
+
     // Forest maker (1 forest)
     if (statusCounts["FOREST"] >= 1) {
       potentialAchievements.push("forest-maker")
     }
-    
+
     // Evolution master (has all statuses)
     if (Object.keys(statusCounts).length === 4) {
       potentialAchievements.push("evolution-master")
     }
-    
+
     // Task master (100 todos)
     if (completedTodos >= 100) {
       potentialAchievements.push("task-master")
     }
-    
+
     // File collector (50 attachments)
     if (totalAttachments >= 50) {
       potentialAchievements.push("file-collector")
     }
-    
+
     // Connector (10 connections)
     if (totalConnections >= 10) {
       potentialAchievements.push("connector")
     }
-    
+
     // Board master (all statuses)
     if (Object.keys(statusCounts).length === 4) {
       potentialAchievements.push("board-master")
@@ -118,7 +119,7 @@ export async function GET(
     return NextResponse.json({
       user: {
         id: user.id,
-        xp: user.xp,
+        xp: user.totalXP,
         level: user.level,
         levelProgress,
         xpToNextLevel

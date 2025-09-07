@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { AchievementEngine } from "@/lib/achievement-engine"
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Get or create default user
     let user = await db.user.findUnique({
       where: { email: "default@example.com" },
     })
-    
+
     if (!user) {
       user = await db.user.create({
         data: {
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     const progress = await AchievementEngine.getUserProgress(user.id)
-    
+
     if (!progress) {
       return NextResponse.json(
         { error: "Failed to get user progress" },

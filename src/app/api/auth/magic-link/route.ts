@@ -41,10 +41,21 @@ export async function POST(req: NextRequest) {
 
     // In a real app, you would send an email with the magic link
     // For demo purposes, we'll just return the token
-    const magicLink = `${process.env.NEXTAUTH_URL}/auth/magic-link?token=${token}`
+    const baseUrl = process.env.NEXTAUTH_URL
+    if (!baseUrl) {
+      console.error("Missing NEXTAUTH_URL env var")
+      return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 })
+    }
+    const magicLink = `${baseUrl}/auth/magic-link?token=${token}`
 
     console.log("Magic link:", magicLink) // For development
 
+    if (process.env.NODE_ENV !== "production") {
+      return NextResponse.json(
+        { message: "Magic link created", magicLink },
+        { status: 200 }
+      )
+    }
     return NextResponse.json(
       { message: "Magic link sent successfully" },
       { status: 200 }

@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     const searchQuery = query.trim().toLowerCase()
-    
+
     const sparks = await db.spark.findMany({
       where: {
         OR: [
@@ -45,8 +45,7 @@ export async function GET(request: NextRequest) {
           },
           {
             tags: {
-              contains: searchQuery,
-              mode: "insensitive",
+              has: searchQuery,
             },
           },
         ],
